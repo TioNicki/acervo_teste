@@ -78,6 +78,17 @@ let fallbackBooks = readJsonFile(fallbackDataPath, []);
 let fallbackUsers = readJsonFile(fallbackUsersPath, []);
 let pool = null;
 let databaseInitPromise = null;
+let lastDatabaseError = null;
+
+function getErrorMessage(error) {
+  if (!error) return null;
+  if (error.message) return error.message;
+  if (error.code) return error.code;
+  if (Array.isArray(error.errors) && error.errors.length > 0) {
+    return error.errors.map(getErrorMessage).filter(Boolean).join('; ');
+  }
+  return String(error);
+}
 
 function getDatabaseConnectionString() {
   return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || null;
@@ -87,10 +98,12 @@ async function initializeDatabase() {
   const connectionString = getDatabaseConnectionString();
   if (!connectionString) {
     console.warn('DATABASE_URL não configurada; usando armazenamento local para usuários e livros.');
+    lastDatabaseError = 'DATABASE_URL não configurada.';
     return false;
   }
 
   if (pool) return true;
+  lastDatabaseError = null;
 
   pool = new Pool({
     connectionString: normalizeConnectionString(connectionString),
@@ -103,9 +116,12 @@ async function initializeDatabase() {
     await ensureDatabaseSchema();
     await pool.query('SELECT 1');
     console.log('Conexão com banco estabelecida.');
+    lastDatabaseError = null;
     return true;
   } catch (error) {
-    console.error('Falha ao conectar ao banco. Verifique DATABASE_URL no Render ou no ambiente local:', error.message);
+    lastDatabaseError = getErrorMessage(error);
+    console.error('Falha ao conectar ao banco. Verifique DATABASE_URL no Render ou no ambiente local:', lastDatabaseError);
+    await pool.end().catch(() => {});
     pool = null;
     return false;
   }
@@ -124,9 +140,11 @@ async function isDatabaseAvailable() {
 
   try {
     await pool.query('SELECT 1');
+    lastDatabaseError = null;
     return true;
   } catch (error) {
-    console.warn('Banco não disponível, usando armazenamento local:', error.message);
+    lastDatabaseError = getErrorMessage(error);
+    console.warn('Banco não disponível, usando armazenamento local:', lastDatabaseError);
     return false;
   }
 }
@@ -162,7 +180,9 @@ async function ensureDatabaseSchema() {
       ON acervo_literario (id_usuario)
     `);
   } catch (error) {
-    console.warn('Não foi possível preparar o esquema do banco:', error.message);
+    lastDatabaseError = getErrorMessage(error);
+    console.warn('Não foi possível preparar o esquema do banco:', lastDatabaseError);
+    throw error;
   }
 }
 
@@ -288,8 +308,10 @@ app.get('/api/health', async (req, res) => {
   const databaseReady = await ensureDatabaseReady();
   res.json({
     status: 'ok',
-    mode: databaseReady ? 'database-or-fallback' : 'fallback',
+    mode: databaseReady ? 'database' : 'fallback',
     databaseConfigured: Boolean(getDatabaseConnectionString()),
+    databaseConnected: Boolean(databaseReady && pool),
+    databaseError: lastDatabaseError,
   });
 });
 
