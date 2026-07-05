@@ -305,6 +305,20 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.post('/api/auth/logout', (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    return res.json({
+      success: true,
+      message: 'Logout realizado com sucesso.',
+      userId: userId || null,
+    });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    return res.status(500).json({ error: 'Erro ao realizar logout.' });
+  }
+});
+
 app.get('/api/livros', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);

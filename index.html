@@ -193,6 +193,7 @@
         .nav-container {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 15px;
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
@@ -449,7 +450,7 @@
             backdrop-filter: blur(4px);
             display: grid;
             place-items: center;
-            z-index: 1000;
+            z-index: 1200; /* Ajustado z-index conforme apontado na revisão anterior */
             padding: 1rem;
             opacity: 0;
             pointer-events: none;
@@ -534,29 +535,10 @@
             margin-top: 1.5rem;
         }
 
-        .auth-message {
-            margin: 0 0 1rem;
-            color: var(--text-light);
-        }
-
-        .auth-actions {
-            display: flex;
-            justify-content: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-
         .header-actions {
             display: flex;
             gap: 0.75rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 0.75rem;
-        }
-
-        .header-actions .btn {
-            min-width: 110px;
+            align-items: center;
         }
 
         /* Botão Alternador de Tema Flutuante */
@@ -591,6 +573,7 @@
             header h1 { font-size: 2rem; }
             nav input[type="search"] { width: 100%; margin-bottom: 10px; }
             .nav-container { flex-direction: column; }
+            .header-actions { width: 100%; }
             .btn { width: 100%; }
             main { padding: 1.5rem; }
             .stats-dashboard { gap: 1rem; }
@@ -599,6 +582,19 @@
     </style>
 </head>
 <body>
+
+    <script>
+        (function() {
+            try {
+                const savedUser = localStorage.getItem('acervo-usuario');
+                if (!savedUser || !JSON.parse(savedUser)?.id) {
+                    window.location.replace('login.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
 
     <header>
         <div class="header-inner">
@@ -708,7 +704,7 @@
 
         <div id="import-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
             <h2 id="import-modal-title" class="modal-title">Importar Livro</h2>
-            <p id="import-modal-text">O livro já foi lido por completo?</p>
+            <div id="import-modal-text">O livro já foi lido por completo?</div>
             
             <div id="import-pages-step" class="form-row hidden" style="margin-bottom: 1.5rem;">
                 <label id="import-pages-label" for="import-pages-input">Quantas páginas você leu?</label>
@@ -865,21 +861,51 @@
             }
         }
 
-        function saveStoredUser(user) {
-            currentUser = user;
-            localStorage.setItem('acervo-usuario', JSON.stringify(user));
-        }
-
         function clearStoredUser() {
+            const userToClear = currentUser || getStoredUser();
             currentUser = null;
             localStorage.removeItem('acervo-usuario');
+
+            if (userToClear?.id) {
+                localStorage.removeItem(`acervo-literario-local-${userToClear.id}`);
+            }
+
+            localStorage.removeItem('acervo-literario-local');
+            localStorage.removeItem('acervo-literario-local-anon');
+        }
+
+        async function logoutSession() {
+            const userSnapshot = currentUser || getStoredUser();
+            try {
+                await fetch(`${apiBase}/api/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-user-id': userSnapshot?.id || '',
+                    },
+                });
+            } catch (error) {
+                console.warn('Logout remoto indisponível, continuando no fluxo local.', error);
+            }
+
+            clearStoredUser();
+            localBooksList = [];
+            renderLivros([]);
+            window.location.replace('login.html');
         }
 
         function ensureAuthenticated() {
-            if (!currentUser?.id) {
+            const storedUser = getStoredUser();
+            if (!storedUser?.id && !currentUser?.id) {
+                clearStoredUser();
                 window.location.replace('login.html');
                 return false;
             }
+
+            if (!currentUser?.id && storedUser?.id) {
+                currentUser = storedUser;
+            }
+
             return true;
         }
 
@@ -890,7 +916,7 @@
             };
         }
 
-        // Lógica de Gerenciamento Estrito de Temas (Carrega do LocalStorage)
+        // Lógica de Gerenciamento Estrito de Temas
         const currentTheme = localStorage.getItem('theme');
         if (currentTheme === 'dark') {
             document.body.classList.add('dark-theme');
@@ -929,7 +955,8 @@
 
             const lidosNoMes = localBooksList.filter(b => {
                 if (!b.created_at || b.paginas === 0 || b.paginas !== b.paginas_lidas) return false;
-                const dataCriacao = new Date(b.created_at.replace(" ", "T"));
+                // Corrigido o bug do replace para evitar Invalid Date em strings ISO estáveis
+                const dataCriacao = new Date(b.created_at);
                 return dataCriacao.getFullYear() === anoAtual && dataCriacao.getMonth() === mesAtual;
             }).length;
 
@@ -1084,7 +1111,6 @@
             formTitle.focus();
         }
 
-        // Interface reativa para a Modal de Importação usando Promises
         function abrirModalImportacao(livro) {
             return new Promise((resolve) => {
                 importModalTitle.textContent = `Importar: ${livro.titulo}`;
@@ -1093,7 +1119,6 @@
                 importPagesLabel.textContent = `Quantas páginas você leu? (Total: ${livro.paginas})`;
                 importPagesInput.value = 0;
 
-                // Restaura o estado padrão dos steps da modal
                 importPagesStep.classList.add('hidden');
                 importPagesActions.classList.add('hidden');
                 importInitialActions.classList.remove('hidden');
@@ -1104,7 +1129,6 @@
                 importModal.classList.remove('hidden');
                 showOverlay();
 
-                // Remove os event listeners antigos antes de registrar novos
                 const limparListeners = () => {
                     importBtnCompleto.onclick = null;
                     importBtnLendo.onclick = null;
@@ -1119,7 +1143,6 @@
                 };
 
                 importBtnLendo.onclick = () => {
-                    // Muda para a segunda etapa (Digitar páginas lidas)
                     importModalText.classList.add('hidden');
                     importInitialActions.classList.add('hidden');
                     importPagesStep.classList.remove('hidden');
@@ -1174,11 +1197,9 @@
         menuClose.addEventListener('click', closeSideMenu);
         menuOverlay.addEventListener('click', closeSideMenu);
 
+        // LÓGICA DE LOGOFF: limpa a sessão local e notifica o backend antes de redirecionar
         logoutBtn.addEventListener('click', () => {
-            clearStoredUser();
-            localBooksList = [];
-            renderLivros([]);
-            window.location.replace('login.html');
+            logoutSession();
         });
 
         window.addEventListener('keydown', (event) => {
@@ -1383,7 +1404,6 @@
                     addBtn.style.borderRadius = '8px';
                     
                     addBtn.addEventListener('click', async () => {
-                        // Invoca o fluxo estático e elegante da nova modal customizada
                         const resultado = await abrirModalImportacao(livroFormatado);
                         
                         if (!resultado.salvar) {
@@ -1494,9 +1514,9 @@
                 card.style.opacity = '0';
 
                 try {
-                    const response = await fetch(`${apiBase}/api/livros/${bookId}`, {
+                    const response = await fetch(`${apiBase}/api/livros/${bookId}`, { 
                         method: 'DELETE',
-                        headers: getAuthHeaders(),
+                        headers: getAuthHeaders()
                     });
                     if (!response.ok) throw new Error('Falha ao remover livro');
                 } catch (error) {
@@ -1533,11 +1553,13 @@
             showFormModal();
         });
 
+        // Inicialização Estrita baseada na autenticação prévia
         currentUser = getStoredUser();
-        if (!currentUser?.id) {
-            window.location.replace('login.html');
-        } else {
+        if (currentUser?.id) {
             fetchLivros();
+        } else {
+            clearStoredUser();
+            window.location.replace('login.html');
         }
     </script>
 </body>
