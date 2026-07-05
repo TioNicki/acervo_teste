@@ -21,6 +21,11 @@
             --border-color: #efebe9;
             --rounded: 12px;         
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* Cores do Logout Customizado (Tema Claro) */
+            --logout-bg: #fbe9e7;
+            --logout-text: #c62828;
+            --logout-hover-bg: #c62828;
         }
 
         /* Variáveis para Tema Escuro */
@@ -34,6 +39,11 @@
             --button-hover: #a1887f;
             --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             --border-color: #2d2d2d;
+
+            /* Cores do Logout Customizado (Tema Escuro) */
+            --logout-bg: rgba(239, 83, 80, 0.1);
+            --logout-text: #ef5350;
+            --logout-hover-bg: #b71c1c;
         }
 
         body {
@@ -112,7 +122,7 @@
         .hamburger-icon::before { top: -6px; }
         .hamburger-icon::after { top: 6px; }
 
-        /* Menu Lateral Animado */
+        /* Menu Lateral Animado CORRIGIDO */
         .side-menu {
             position: fixed;
             top: 0;
@@ -126,6 +136,11 @@
             transform: translateX(-110%);
             transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, background-color 0.3s;
             opacity: 0;
+            box-sizing: border-box;
+
+            /* Flexbox estruturado para empurrar o rodapé do menu */
+            display: flex;
+            flex-direction: column;
         }
 
         .menu-overlay {
@@ -163,11 +178,13 @@
             cursor: pointer;
             margin-bottom: 1.5rem;
             transition: var(--transition);
+            align-self: flex-start;
         }
 
         .side-menu-nav {
             display: grid;
             gap: 0.75rem;
+            /* REMOVIDO o flex-grow daqui para os botões não esticarem feito doidos */
         }
 
         .side-menu-item {
@@ -181,6 +198,7 @@
             cursor: pointer;
             font-weight: 600;
             transition: var(--transition);
+            box-sizing: border-box;
         }
 
         .side-menu-item.active,
@@ -188,6 +206,20 @@
             background: var(--button-bg);
             color: #fff;
             transform: translateX(4px);
+        }
+
+        /* Estilização Proporcional do Botão Sair */
+        .btn-logout {
+            background: var(--logout-bg);
+            color: var(--logout-text);
+            margin-top: auto; /* Faz o botão ir lá para baixo sozinho e mantém o tamanho padrão */
+            border: 1px solid rgba(198, 40, 40, 0.15);
+        }
+
+        .btn-logout:hover {
+            background: var(--logout-hover-bg);
+            color: #ffffff;
+            transform: translateY(-2px);
         }
 
         .nav-container {
@@ -450,7 +482,7 @@
             backdrop-filter: blur(4px);
             display: grid;
             place-items: center;
-            z-index: 1200; /* Ajustado z-index conforme apontado na revisão anterior */
+            z-index: 1200; 
             padding: 1rem;
             opacity: 0;
             pointer-events: none;
@@ -569,16 +601,22 @@
 
         .hidden { display: none !important; }
 
-        @media (max-width: 600px) {
-            header h1 { font-size: 2rem; }
-            nav input[type="search"] { width: 100%; margin-bottom: 10px; }
-            .nav-container { flex-direction: column; }
-            .header-actions { width: 100%; }
-            .btn { width: 100%; }
-            main { padding: 1.5rem; }
-            .stats-dashboard { gap: 1rem; }
-            .stat-item { min-width: 40%; flex: 1; }
-        }
+        /* Procure por essa parte lá no final do seu <style> e substitua: */
+@media (max-width: 600px) {
+    header h1 { font-size: 2rem; }
+    nav input[type="search"] { width: 100%; margin-bottom: 10px; }
+    .nav-container { flex-direction: column; }
+    
+    /* AJUSTE AQUI: Garante que os botões/ações do container fiquem centralizados */
+    .header-actions { 
+        width: 100%; 
+        justify-content: center; 
+    }
+    .btn { width: 100%; }
+    main { padding: 1.5rem; }
+    .stats-dashboard { gap: 1rem; }
+    .stat-item { min-width: 40%; flex: 1; }
+}
     </style>
 </head>
 <body>
@@ -608,7 +646,6 @@
             <input id="search-input" type="search" placeholder="Buscar por título ou autor...">
             <div class="header-actions">
                 <button id="add-book-btn" class="btn btn-primary">+ Adicionar Novo</button>
-                <button id="logout-btn" class="btn btn-card btn-edit">Sair</button>
             </div>
         </nav>
 
@@ -641,6 +678,7 @@
             <button id="menu-lidos" class="side-menu-item" type="button">Livros Lidos</button>
             <button id="menu-buscar" class="side-menu-item" type="button">Buscar Livros Online</button>
         </nav>
+        <button id="logout-btn" class="side-menu-item btn-logout" type="button">Sair da Conta</button>
     </aside>
 
     <main>
@@ -955,7 +993,6 @@
 
             const lidosNoMes = localBooksList.filter(b => {
                 if (!b.created_at || b.paginas === 0 || b.paginas !== b.paginas_lidas) return false;
-                // Corrigido o bug do replace para evitar Invalid Date em strings ISO estáveis
                 const dataCriacao = new Date(b.created_at);
                 return dataCriacao.getFullYear() === anoAtual && dataCriacao.getMonth() === mesAtual;
             }).length;
@@ -969,13 +1006,16 @@
                 statItemTotal.classList.remove('hidden');
                 statItemMonth.classList.remove('hidden');
                 statItemNotRead.classList.remove('hidden');
+                addBookBtn.classList.remove('hidden');
             } else if (currentView === 'lidos') {
                 statsDashboard.classList.remove('hidden');
                 statItemTotal.classList.remove('hidden');
                 statItemMonth.classList.remove('hidden');
                 statItemNotRead.classList.add('hidden'); 
+                addBookBtn.classList.add('hidden');
             } else if (currentView === 'search') {
                 statsDashboard.classList.add('hidden'); 
+                addBookBtn.classList.add('hidden');
             }
         }
 
@@ -1197,7 +1237,6 @@
         menuClose.addEventListener('click', closeSideMenu);
         menuOverlay.addEventListener('click', closeSideMenu);
 
-        // LÓGICA DE LOGOFF: limpa a sessão local e notifica o backend antes de redirecionar
         logoutBtn.addEventListener('click', () => {
             logoutSession();
         });
@@ -1430,7 +1469,7 @@
 
             } catch (err) {
                 console.error("Erro na Open Library API:", err);
-                filtrarLivrosLocais(termo);
+                filtrarLivrosLocLocais(termo);
             }
         }
 
@@ -1468,7 +1507,7 @@
                 persistLocalBooks(syncedBooks);
             } catch (error) {
                 console.error(error);
-                formError.textContent = 'Livro salvo localmente. O servidor não respondeu, mas ficará disponível offline.';
+                formError.textContent = 'Livro saved localmente. O servidor não respondeu, mas ficará disponível offline.';
             }
 
             if (currentView === 'lidos') showLidosView();

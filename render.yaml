@@ -1,8 +1,3 @@
-databases:
-  - name: acervo-postgres
-    databaseName: acervo
-    user: acervo
-
 services:
   - type: web
     name: acervo-teste
@@ -11,10 +6,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
-    envVars:
+envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: acervo-postgres
-          property: connectionString
+        value: postgresql://postgres.kewtadtuizlncqpphzcf:P*KD%2CQaC_bE8%40SH@aws-1-us-west-2.pooler.supabase.com:5432/postgres
