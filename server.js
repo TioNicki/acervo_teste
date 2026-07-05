@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -8,8 +7,6 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-const fallbackDataPath = path.join(__dirname, 'data', 'livros.json');
-const fallbackUsersPath = path.join(__dirname, 'data', 'usuarios.json');
 
 function normalizeConnectionString(connectionString) {
   const lastAt = connectionString.lastIndexOf('@');
@@ -28,32 +25,9 @@ function normalizeConnectionString(connectionString) {
   return `${scheme}${encodedAuth}@${suffix}`;
 }
 
-function ensureStore(filePath, fallbackContent) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, fallbackContent, 'utf8');
-  }
-}
-
-function readJsonFile(filePath, fallbackValue) {
-  ensureStore(filePath, JSON.stringify(fallbackValue));
-  try {
-    const rawData = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(rawData);
-  } catch (error) {
-    console.warn(`Não foi possível ler ${filePath}, iniciando vazio.`, error.message);
-    return fallbackValue;
-  }
-}
-
-function writeJsonFile(filePath, data) {
-  ensureStore(filePath, JSON.stringify(data));
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-}
-
-function normalizeBook(book, fallbackId = null, userId = null) {
+function normalizeBook(book, userId = null) {
   return {
-    id: book.id ?? fallbackId ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: book.id,
     titulo: book.titulo ?? '',
     autor: book.autor ?? '',
     descricao: book.descricao ?? '',
@@ -65,17 +39,14 @@ function normalizeBook(book, fallbackId = null, userId = null) {
   };
 }
 
-function normalizeUser(user, fallbackId = null) {
-  // AJUSTE: Garante compatibilidade estrita do ID (String no JSON local, Number no DB)
+function normalizeUser(user) {
   return {
-    id: user.id ?? fallbackId ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: user.id,
     usuario: user.usuario ?? '',
     senha: user.senha ?? '',
   };
 }
 
-let fallbackBooks = readJsonFile(fallbackDataPath, []);
-let fallbackUsers = readJsonFile(fallbackUsersPath, []);
 let pool = null;
 let databaseInitPromise = null;
 let lastDatabaseError = null;
@@ -97,7 +68,7 @@ function getDatabaseConnectionString() {
 async function initializeDatabase() {
   const connectionString = getDatabaseConnectionString();
   if (!connectionString) {
-    console.warn('DATABASE_URL não configurada; usando armazenamento local para usuários e livros.');
+    console.error('DATABASE_URL não configurada. O app exige Postgres no Render.');
     lastDatabaseError = 'DATABASE_URL não configurada.';
     return false;
   }
@@ -134,18 +105,27 @@ async function ensureDatabaseReady() {
   return databaseInitPromise;
 }
 
-async function isDatabaseAvailable() {
+async function requireDatabase(req, res, next) {
   const databaseReady = await ensureDatabaseReady();
-  if (!databaseReady || !pool) return false;
+  if (!databaseReady || !pool) {
+    return res.status(503).json({
+      error: 'Banco de dados indisponível. Verifique a DATABASE_URL no Render.',
+      databaseConnected: false,
+      databaseError: lastDatabaseError,
+    });
+  }
 
   try {
     await pool.query('SELECT 1');
     lastDatabaseError = null;
-    return true;
+    return next();
   } catch (error) {
     lastDatabaseError = getErrorMessage(error);
-    console.warn('Banco não disponível, usando armazenamento local:', lastDatabaseError);
-    return false;
+    return res.status(503).json({
+      error: 'Banco de dados indisponível. Tente novamente em instantes.',
+      databaseConnected: false,
+      databaseError: lastDatabaseError,
+    });
   }
 }
 
@@ -191,41 +171,24 @@ function getUserIdFromRequest(req) {
 }
 
 async function findUserByCredentials(usuario, senha) {
-  if (pool && (await isDatabaseAvailable())) {
-    try {
-      const result = await pool.query(
-        'SELECT id, usuario, senha FROM usuarios_acervo WHERE usuario = $1 AND senha = $2',
-        [usuario, senha]
-      );
-      return result.rows[0] ? normalizeUser(result.rows[0]) : null;
-    } catch (error) {
-      console.warn('Falha ao consultar usuário no banco, usando fallback local.', error.message);
-    }
-  }
-  return fallbackUsers.find((user) => user.usuario === usuario && user.senha === senha) || null;
+  const result = await pool.query(
+    'SELECT id, usuario, senha FROM usuarios_acervo WHERE usuario = $1 AND senha = $2',
+    [usuario, senha]
+  );
+  return result.rows[0] ? normalizeUser(result.rows[0]) : null;
 }
 
 async function createUser(usuario, senha) {
-  if (pool && (await isDatabaseAvailable())) {
-    try {
-      const result = await pool.query(
-        'INSERT INTO usuarios_acervo (usuario, senha) VALUES ($1, $2) RETURNING id, usuario, senha',
-        [usuario, senha]
-      );
-      return result.rows[0] ? normalizeUser(result.rows[0]) : null;
-    } catch (error) {
-      console.warn('Falha ao criar usuário no banco, usando fallback local.', error.message);
-    }
+  try {
+    const result = await pool.query(
+      'INSERT INTO usuarios_acervo (usuario, senha) VALUES ($1, $2) RETURNING id, usuario, senha',
+      [usuario, senha]
+    );
+    return result.rows[0] ? normalizeUser(result.rows[0]) : null;
+  } catch (error) {
+    if (error.code === '23505') return null;
+    throw error;
   }
-
-  if (fallbackUsers.some((user) => user.usuario === usuario)) {
-    return null;
-  }
-
-  const newUser = normalizeUser({ usuario, senha });
-  fallbackUsers = [newUser, ...fallbackUsers];
-  writeJsonFile(fallbackUsersPath, fallbackUsers);
-  return newUser;
 }
 
 async function getBooksFromDatabase(userId) {
@@ -235,9 +198,8 @@ async function getBooksFromDatabase(userId) {
     WHERE id_usuario = $1
     ORDER BY titulo
   `;
-  // AJUSTE: Cast numérico para evitar estouro caso a string 'local-x' seja enviada sem querer
   const result = await pool.query(query, [Number(userId) || 0]);
-  return result.rows.map((row) => normalizeBook(row, row.id, userId));
+  return result.rows.map((row) => normalizeBook(row, userId));
 }
 
 async function createBookInDatabase(bookData, userId) {
@@ -255,7 +217,7 @@ async function createBookInDatabase(bookData, userId) {
     bookData.capa,
     Number(userId) || 0,
   ]);
-  return normalizeBook(result.rows[0], result.rows[0].id, userId);
+  return normalizeBook(result.rows[0], userId);
 }
 
 async function updateBookInDatabase(bookId, bookData, userId) {
@@ -275,7 +237,7 @@ async function updateBookInDatabase(bookId, bookData, userId) {
     bookData.capa,
     Number(userId) || 0
   ]);
-  return result.rows[0] ? normalizeBook(result.rows[0], result.rows[0].id, userId) : null;
+  return result.rows[0] ? normalizeBook(result.rows[0], userId) : null;
 }
 
 async function deleteBookInDatabase(bookId, userId) {
@@ -288,9 +250,6 @@ async function deleteBookInDatabase(bookId, userId) {
 
 app.use(cors());
 app.use(express.json());
-
-// Servindo arquivos estáticos de forma limpa
-app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -308,14 +267,14 @@ app.get('/api/health', async (req, res) => {
   const databaseReady = await ensureDatabaseReady();
   res.json({
     status: 'ok',
-    mode: databaseReady ? 'database' : 'fallback',
+    mode: databaseReady ? 'database' : 'database-unavailable',
     databaseConfigured: Boolean(getDatabaseConnectionString()),
     databaseConnected: Boolean(databaseReady && pool),
     databaseError: lastDatabaseError,
   });
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', requireDatabase, async (req, res) => {
   try {
     const { usuario, senha } = req.body || {};
     if (!usuario || !senha) {
@@ -334,7 +293,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', requireDatabase, async (req, res) => {
   try {
     const { usuario, senha } = req.body || {};
     if (!usuario || !senha) {
@@ -367,27 +326,22 @@ app.post('/api/auth/logout', (req, res) => {
   }
 });
 
-app.get('/api/livros', async (req, res) => {
+app.get('/api/livros', requireDatabase, async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não informado.' });
     }
 
-    if (pool && (await isDatabaseAvailable())) {
-      const books = await getBooksFromDatabase(userId);
-      return res.json(books);
-    }
-
-    const books = fallbackBooks.filter((book) => String(book.id_usuario) === String(userId));
-    return res.json(books.map((book) => normalizeBook(book, book.id, userId)));
+    const books = await getBooksFromDatabase(userId);
+    return res.json(books);
   } catch (error) {
     console.error('Erro ao buscar livros:', error);
     return res.status(500).json({ error: 'Erro ao buscar livros.' });
   }
 });
 
-app.post('/api/livros', async (req, res) => {
+app.post('/api/livros', requireDatabase, async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -396,23 +350,7 @@ app.post('/api/livros', async (req, res) => {
 
     const { titulo, autor, descricao = '', paginas = 0, paginas_lidas = 0, capa = '' } = req.body;
 
-    if (pool && (await isDatabaseAvailable())) {
-      const newBook = await createBookInDatabase({ titulo, autor, descricao, paginas, paginas_lidas, capa }, userId);
-      return res.status(201).json(newBook);
-    }
-
-    const newBook = normalizeBook({
-      titulo,
-      autor,
-      descricao,
-      paginas,
-      paginas_lidas,
-      capa,
-      id_usuario: userId,
-      created_at: new Date().toISOString(),
-    }, null, userId);
-    fallbackBooks = [newBook, ...fallbackBooks];
-    writeJsonFile(fallbackDataPath, fallbackBooks);
+    const newBook = await createBookInDatabase({ titulo, autor, descricao, paginas, paginas_lidas, capa }, userId);
     return res.status(201).json(newBook);
   } catch (error) {
     console.error('Erro ao criar livro:', error);
@@ -420,7 +358,7 @@ app.post('/api/livros', async (req, res) => {
   }
 });
 
-app.put('/api/livros/:id', async (req, res) => {
+app.put('/api/livros/:id', requireDatabase, async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -430,32 +368,10 @@ app.put('/api/livros/:id', async (req, res) => {
     const { id } = req.params;
     const { titulo, autor, descricao = '', paginas = 0, paginas_lidas = 0, capa = '' } = req.body;
 
-    if (pool && (await isDatabaseAvailable())) {
-      const updatedBook = await updateBookInDatabase(id, { titulo, autor, descricao, paginas, paginas_lidas, capa }, userId);
-      if (!updatedBook) {
-        return res.status(404).json({ error: 'Livro não encontrado' });
-      }
-      return res.json(updatedBook);
-    }
-
-    const existingBook = fallbackBooks.find((book) => String(book.id) === String(id) && String(book.id_usuario) === String(userId));
-    if (!existingBook) {
+    const updatedBook = await updateBookInDatabase(id, { titulo, autor, descricao, paginas, paginas_lidas, capa }, userId);
+    if (!updatedBook) {
       return res.status(404).json({ error: 'Livro não encontrado' });
     }
-
-    const updatedBook = normalizeBook({
-      ...existingBook,
-      titulo,
-      autor,
-      descricao,
-      paginas,
-      paginas_lidas,
-      capa,
-      id_usuario: userId,
-      created_at: existingBook.created_at || new Date().toISOString(),
-    }, id, userId);
-    fallbackBooks = fallbackBooks.map((book) => String(book.id) === String(id) ? updatedBook : book);
-    writeJsonFile(fallbackDataPath, fallbackBooks);
     return res.json(updatedBook);
   } catch (error) {
     console.error('Erro ao atualizar livro:', error);
@@ -463,7 +379,7 @@ app.put('/api/livros/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/livros/:id', async (req, res) => {
+app.delete('/api/livros/:id', requireDatabase, async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) {
@@ -472,21 +388,10 @@ app.delete('/api/livros/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    if (pool && (await isDatabaseAvailable())) {
-      const deleted = await deleteBookInDatabase(id, userId);
-      if (!deleted) {
-        return res.status(404).json({ error: 'Livro não encontrado' });
-      }
-      return res.json({ success: true });
-    }
-
-    const existed = fallbackBooks.some((book) => String(book.id) === String(id) && String(book.id_usuario) === String(userId));
-    if (!existed) {
+    const deleted = await deleteBookInDatabase(id, userId);
+    if (!deleted) {
       return res.status(404).json({ error: 'Livro não encontrado' });
     }
-
-    fallbackBooks = fallbackBooks.filter((book) => String(book.id) !== String(id));
-    writeJsonFile(fallbackDataPath, fallbackBooks);
     return res.json({ success: true });
   } catch (error) {
     console.error('Erro ao remover livro:', error);
@@ -501,5 +406,5 @@ app.use((err, req, res, next) => {
 
 app.listen(port, () => {
   console.log(`Backend iniciado em http://localhost:${port}`);
-  console.log(`Armazenamento local ativo em ${fallbackDataPath}`);
+  console.log('Persistência configurada exclusivamente no Postgres.');
 });

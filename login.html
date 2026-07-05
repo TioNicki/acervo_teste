@@ -248,7 +248,7 @@
             return window.location.origin;
         })();
 
-        const savedUser = localStorage.getItem('acervo-usuario');
+        const savedUser = sessionStorage.getItem('acervo-usuario');
         if (savedUser) {
             window.location.replace('index.html');
         }
@@ -266,8 +266,8 @@
 
         let isLoginMode = true; // Controla se a tela está em modo Login ou Cadastro
 
-        // Lógica de Sincronização Estrita de Temas (vinda do localStorage)
-        const currentTheme = localStorage.getItem('theme');
+        // Lógica de Sincronização Estrita de Temas
+        const currentTheme = sessionStorage.getItem('theme');
         if (currentTheme === 'dark') {
             document.body.classList.add('dark-theme');
             themeToggle.textContent = '☀️';
@@ -284,7 +284,7 @@
             } else {
                 themeToggle.textContent = '🌙';
             }
-            localStorage.setItem('theme', theme);
+            sessionStorage.setItem('theme', theme);
         });
 
         // Alternador de Modo (Login <-> Cadastro)
@@ -332,12 +332,12 @@
                     body: JSON.stringify({ usuario: username, senha: password })
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(data.error || 'Falha na autenticação');
                 }
 
-                localStorage.setItem('acervo-usuario', JSON.stringify({ id: data.id, usuario: data.usuario, senha: data.senha }));
+                sessionStorage.setItem('acervo-usuario', JSON.stringify({ id: data.id, usuario: data.usuario }));
                 showMessage(isLoginMode ? 'Login efetuado com sucesso! Redirecionando...' : 'Conta criada com sucesso! Carregando...', 'success-msg');
 
                 setTimeout(() => {

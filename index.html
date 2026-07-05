@@ -624,7 +624,7 @@
     <script>
         (function() {
             try {
-                const savedUser = localStorage.getItem('acervo-usuario');
+                const savedUser = sessionStorage.getItem('acervo-usuario');
                 if (!savedUser || !JSON.parse(savedUser)?.id) {
                     window.location.replace('login.html');
                 }
@@ -788,7 +788,6 @@
             return window.location.origin;
         })();
 
-        const storageKey = 'acervo-literario-local';
         const livrosContainer = document.getElementById('livros-container');
         const loadingMessage = document.getElementById('loading-message');
         const searchInput = document.getElementById('search-input');
@@ -848,17 +847,13 @@
 
         let confirmCallback = null;
         let currentEditCard = null;
-        let localBooksList = []; 
+        let localBooksList = [];
         let currentView = 'library';
         let currentUser = null;
 
-        function buildBookId(prefix = 'book') {
-            return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        }
-
-        function normalizeBook(book, fallbackId = null) {
+        function normalizeBook(book) {
             return {
-                id: book?.id ?? fallbackId ?? buildBookId(),
+                id: book?.id ?? null,
                 titulo: book?.titulo ?? '',
                 autor: book?.autor ?? '',
                 descricao: book?.descricao ?? '',
@@ -869,29 +864,14 @@
             };
         }
 
-        function getStorageKey() {
-            return currentUser ? `acervo-literario-local-${currentUser.id}` : `${storageKey}-anon`;
-        }
-
-        function getLocalBooks() {
-            try {
-                const saved = localStorage.getItem(getStorageKey());
-                return saved ? JSON.parse(saved).map((book) => normalizeBook(book)) : [];
-            } catch (error) {
-                console.warn('Falha ao ler acervo local:', error);
-                return [];
-            }
-        }
-
-        function persistLocalBooks(books) {
+        function setBooks(books) {
             localBooksList = Array.isArray(books) ? books.map((book) => normalizeBook(book)) : [];
-            localStorage.setItem(getStorageKey(), JSON.stringify(localBooksList));
             return localBooksList;
         }
 
         function getStoredUser() {
             try {
-                const saved = localStorage.getItem('acervo-usuario');
+                const saved = sessionStorage.getItem('acervo-usuario');
                 return saved ? JSON.parse(saved) : null;
             } catch (error) {
                 console.warn('Falha ao ler usuário salvo:', error);
@@ -900,16 +880,8 @@
         }
 
         function clearStoredUser() {
-            const userToClear = currentUser || getStoredUser();
             currentUser = null;
-            localStorage.removeItem('acervo-usuario');
-
-            if (userToClear?.id) {
-                localStorage.removeItem(`acervo-literario-local-${userToClear.id}`);
-            }
-
-            localStorage.removeItem('acervo-literario-local');
-            localStorage.removeItem('acervo-literario-local-anon');
+            sessionStorage.removeItem('acervo-usuario');
         }
 
         async function logoutSession() {
@@ -923,7 +895,7 @@
                     },
                 });
             } catch (error) {
-                console.warn('Logout remoto indisponível, continuando no fluxo local.', error);
+                console.warn('Logout remoto indisponível; limpando apenas a sessão da tela.', error);
             }
 
             clearStoredUser();
@@ -955,7 +927,7 @@
         }
 
         // Lógica de Gerenciamento Estrito de Temas
-        const currentTheme = localStorage.getItem('theme');
+        const currentTheme = sessionStorage.getItem('theme');
         if (currentTheme === 'dark') {
             document.body.classList.add('dark-theme');
             themeToggle.textContent = '☀️';
@@ -972,7 +944,7 @@
             } else {
                 themeToggle.textContent = '🌙';
             }
-            localStorage.setItem('theme', theme);
+            sessionStorage.setItem('theme', theme);
         });
 
         formStatus.addEventListener('change', () => {
@@ -1372,21 +1344,16 @@
                 const response = await fetch(`${apiBase}/api/livros`, {
                     headers: getAuthHeaders(),
                 });
-                if (!response.ok) throw new Error('Falha ao carregar livros');
-                const books = await response.json();
-                persistLocalBooks(Array.isArray(books) ? books : []);
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Falha ao carregar livros');
+                setBooks(Array.isArray(data) ? data : []);
                 calculateStats();
                 renderLivros(localBooksList);
             } catch (error) {
                 console.error(error);
-                const fallbackBooks = getLocalBooks();
-                if (fallbackBooks.length > 0) {
-                    persistLocalBooks(fallbackBooks);
-                    calculateStats();
-                    renderLivros(localBooksList);
-                    return;
-                }
-                livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Erro ao carregar o acervo. Você pode continuar editando localmente.</p>';
+                setBooks([]);
+                calculateStats();
+                livrosContainer.innerHTML = `<p style="text-align:center; color: var(--accent);">${error.message || 'Erro ao carregar o acervo.'}</p>`;
                 updateSummary(0);
             }
         }
@@ -1469,7 +1436,7 @@
 
             } catch (err) {
                 console.error("Erro na Open Library API:", err);
-                filtrarLivrosLocLocais(termo);
+                filtrarLivrosLocais(termo);
             }
         }
 
@@ -1489,25 +1456,20 @@
         }
 
         async function saveNewLivro(livroData) {
-            const optimisticBook = normalizeBook({ id: buildBookId(), ...livroData });
-            const nextBooks = [optimisticBook, ...localBooksList];
-            persistLocalBooks(nextBooks);
-            closeModal();
-            renderLivros(localBooksList);
-
             try {
                 const response = await fetch(`${apiBase}/api/livros`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify(livroData),
                 });
-                if (!response.ok) throw new Error('Falha ao criar livro');
-                const savedBook = normalizeBook(await response.json(), optimisticBook.id);
-                const syncedBooks = nextBooks.map((book) => String(book.id) === String(optimisticBook.id) ? savedBook : book);
-                persistLocalBooks(syncedBooks);
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Falha ao criar livro');
+                setBooks([data, ...localBooksList]);
+                closeModal();
             } catch (error) {
                 console.error(error);
-                formError.textContent = 'Livro saved localmente. O servidor não respondeu, mas ficará disponível offline.';
+                formError.textContent = error.message || 'Não foi possível salvar no banco.';
+                return;
             }
 
             if (currentView === 'lidos') showLidosView();
@@ -1516,12 +1478,6 @@
 
         async function saveEditedLivro(card, livroData) {
             const bookId = card.dataset.id;
-            const updatedList = localBooksList.map((book) => String(book.id) === String(bookId)
-                ? normalizeBook({ ...book, ...livroData }, bookId)
-                : book);
-            persistLocalBooks(updatedList);
-            closeModal();
-            renderLivros(localBooksList);
 
             try {
                 const response = await fetch(`${apiBase}/api/livros/${bookId}`, {
@@ -1529,11 +1485,14 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify(livroData),
                 });
-                if (!response.ok) throw new Error('Falha ao atualizar livro');
-                await response.json();
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Falha ao atualizar livro');
+                setBooks(localBooksList.map((book) => String(book.id) === String(bookId) ? data : book));
+                closeModal();
             } catch (error) {
                 console.error(error);
-                formError.textContent = 'Edição salva localmente. O servidor não respondeu, mas os dados continuam disponíveis offline.';
+                formError.textContent = error.message || 'Não foi possível atualizar no banco.';
+                return;
             }
 
             if (currentView === 'lidos') showLidosView();
@@ -1546,21 +1505,23 @@
                 if (!confirmed) return;
 
                 const bookId = card.dataset.id;
-                const nextBooks = localBooksList.filter((book) => String(book.id) !== String(bookId));
-                persistLocalBooks(nextBooks);
-
-                card.style.transform = 'scale(0.9) translateY(10px)';
-                card.style.opacity = '0';
 
                 try {
                     const response = await fetch(`${apiBase}/api/livros/${bookId}`, { 
                         method: 'DELETE',
                         headers: getAuthHeaders()
                     });
-                    if (!response.ok) throw new Error('Falha ao remover livro');
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(data.error || 'Falha ao remover livro');
                 } catch (error) {
                     console.error(error);
+                    livrosContainer.innerHTML = `<p style="text-align:center; color: var(--accent);">${error.message || 'Não foi possível remover no banco.'}</p>`;
+                    return;
                 }
+
+                setBooks(localBooksList.filter((book) => String(book.id) !== String(bookId)));
+                card.style.transform = 'scale(0.9) translateY(10px)';
+                card.style.opacity = '0';
 
                 setTimeout(() => {
                     card.remove();
