@@ -236,14 +236,17 @@
 
             const host = window.location.hostname;
             const port = window.location.port;
-            if (host === '127.0.0.1' || host === 'localhost') {
-                return `${window.location.protocol}//${host}:3000`;
-            }
-            if (port === '3001') {
-                return `${window.location.protocol}//${host}:3000`;
+            const isLocalHost = host === '127.0.0.1' || host === 'localhost';
+            if (isLocalHost || port === '3001') {
+                return `${window.location.protocol}//${host || 'localhost'}:3000`;
             }
             return window.location.origin;
         })();
+
+        const savedUser = localStorage.getItem('acervo-usuario');
+        if (savedUser) {
+            window.location.replace('index.html');
+        }
 
         const themeToggle = document.getElementById('theme-toggle');
         const formTitle = document.getElementById('form-title');

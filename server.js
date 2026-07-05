@@ -240,6 +240,27 @@ async function deleteBookInDatabase(bookId, userId) {
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/index', (req, res) => {
+  res.redirect('/');
+});
+
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 app.use(express.static(path.join(__dirname)));
 
 app.get('/api/health', (req, res) => {

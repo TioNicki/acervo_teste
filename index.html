@@ -706,24 +706,6 @@
             </div>
         </div>
 
-        <div id="auth-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-            <h2 id="auth-modal-title" class="modal-title">Entrar no acervo</h2>
-            <p id="auth-modal-message" class="auth-message">Entre para acessar e administrar seus livros.</p>
-            <div class="form-row">
-                <label for="auth-usuario">Nome de usuário</label>
-                <input id="auth-usuario" type="text" placeholder="Digite seu usuário">
-            </div>
-            <div class="form-row">
-                <label for="auth-senha">Senha</label>
-                <input id="auth-senha" type="password" placeholder="Digite sua senha">
-            </div>
-            <div class="form-error" id="auth-error"></div>
-            <div class="modal-form-actions">
-                <button id="auth-switch-btn" class="btn btn-card btn-edit" type="button">Criar conta</button>
-                <button id="auth-submit-btn" class="btn btn-card btn-primary" type="button">Entrar</button>
-            </div>
-        </div>
-
         <div id="import-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
             <h2 id="import-modal-title" class="modal-title">Importar Livro</h2>
             <p id="import-modal-text">O livro já foi lido por completo?</p>
@@ -760,11 +742,9 @@
 
             const host = window.location.hostname;
             const port = window.location.port;
-            if (host === '127.0.0.1' || host === 'localhost') {
-                return `${window.location.protocol}//${host}:3000`;
-            }
-            if (port === '3001') {
-                return `${window.location.protocol}//${host}:3000`;
+            const isLocalHost = host === '127.0.0.1' || host === 'localhost';
+            if (isLocalHost || port === '3001') {
+                return `${window.location.protocol}//${host || 'localhost'}:3000`;
             }
             return window.location.origin;
         })();
@@ -779,7 +759,6 @@
         const modalOverlay = document.getElementById('modal-overlay');
         const confirmModal = document.getElementById('confirm-modal');
         const formModal = document.getElementById('form-modal');
-        const authModal = document.getElementById('auth-modal');
         const importModal = document.getElementById('import-modal');
         const modalMessage = document.getElementById('modal-message');
         const modalConfirm = document.getElementById('modal-confirm');
@@ -803,13 +782,6 @@
         const menuLidos = document.getElementById('menu-lidos');
         const menuBuscar = document.getElementById('menu-buscar');
         const themeToggle = document.getElementById('theme-toggle');
-        const authModalTitle = document.getElementById('auth-modal-title');
-        const authModalMessage = document.getElementById('auth-modal-message');
-        const authUsuario = document.getElementById('auth-usuario');
-        const authSenha = document.getElementById('auth-senha');
-        const authError = document.getElementById('auth-error');
-        const authSwitchBtn = document.getElementById('auth-switch-btn');
-        const authSubmitBtn = document.getElementById('auth-submit-btn');
 
         // Referências da Modal de Importação
         const importModalTitle = document.getElementById('import-modal-title');
@@ -840,7 +812,6 @@
         let localBooksList = []; 
         let currentView = 'library';
         let currentUser = null;
-        let authMode = 'login';
 
         function buildBookId(prefix = 'book') {
             return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -899,33 +870,9 @@
             localStorage.removeItem('acervo-usuario');
         }
 
-        function showAuthModal(mode = 'login') {
-            authMode = mode;
-            confirmModal.classList.add('hidden');
-            formModal.classList.add('hidden');
-            importModal.classList.add('hidden');
-            authModal.classList.remove('hidden');
-            authError.textContent = '';
-            authUsuario.value = '';
-            authSenha.value = '';
-            authModalTitle.textContent = mode === 'login' ? 'Entrar no acervo' : 'Criar conta';
-            authModalMessage.textContent = mode === 'login'
-                ? 'Entre para acessar e administrar seus livros.'
-                : 'Cadastre-se para salvar seus livros em seu próprio login.';
-            authSubmitBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar conta';
-            authSwitchBtn.textContent = mode === 'login' ? 'Criar conta' : 'Já tenho conta';
-            showOverlay();
-            authUsuario.focus();
-        }
-
-        function closeAuthModal() {
-            authModal.classList.add('hidden');
-            hideOverlay();
-        }
-
         function ensureAuthenticated() {
-            if (!currentUser) {
-                showAuthModal('login');
+            if (!currentUser?.id) {
+                window.location.replace('login.html');
                 return false;
             }
             return true;
@@ -1202,7 +1149,6 @@
             setTimeout(() => {
                 confirmModal.classList.add('hidden');
                 formModal.classList.add('hidden');
-                authModal.classList.add('hidden');
                 importModal.classList.add('hidden');
                 confirmCallback = null;
                 currentEditCard = null;
@@ -1223,45 +1169,11 @@
         menuClose.addEventListener('click', closeSideMenu);
         menuOverlay.addEventListener('click', closeSideMenu);
 
-        authSwitchBtn.addEventListener('click', () => {
-            showAuthModal(authMode === 'login' ? 'register' : 'login');
-        });
-
-        authSubmitBtn.addEventListener('click', async () => {
-            const usuario = authUsuario.value.trim();
-            const senha = authSenha.value.trim();
-
-            if (!usuario || !senha) {
-                authError.textContent = 'Preencha usuário e senha.';
-                return;
-            }
-
-            try {
-                const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-                const response = await fetch(`${apiBase}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario, senha }),
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Falha na autenticação.');
-
-                saveStoredUser(data);
-                closeModal();
-                await fetchLivros();
-                if (currentView === 'lidos') showLidosView();
-                else showLibraryView();
-            } catch (error) {
-                authError.textContent = error.message;
-            }
-        });
-
         logoutBtn.addEventListener('click', () => {
             clearStoredUser();
             localBooksList = [];
             renderLivros([]);
-            showAuthModal('login');
+            window.location.replace('login.html');
         });
 
         window.addEventListener('keydown', (event) => {
@@ -1618,7 +1530,7 @@
 
         currentUser = getStoredUser();
         if (!currentUser?.id) {
-            showAuthModal('login');
+            window.location.replace('login.html');
         } else {
             fetchLivros();
         }
