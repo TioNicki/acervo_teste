@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso - Meu Acervo Literário</title>
+    <style>
+        /* Importação de fontes idênticas ao index */
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap');
+
+        /* Variáveis de Tema Claro idênticas */
+        :root {
+            --bg-color: #fdfcf8;      
+            --card-bg: #ffffff;      
+            --text-dark: #3e2723;    
+            --text-light: #5d4037;   
+            --accent: #a1887f;       
+            --button-bg: #6d4c41;    
+            --button-hover: #5d4037; 
+            --shadow: 0 4px 12px rgba(93, 64, 55, 0.08); 
+            --border-color: #efebe9;
+            --rounded: 12px;         
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Variáveis de Tema Escuro idênticas */
+        .dark-theme {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-dark: #f5efe6;
+            --text-light: #d7ccc8;
+            --accent: #8d6e63;
+            --button-bg: #8d6e63;
+            --button-hover: #a1887f;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --border-color: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+
+        /* Container do Formulário (Estilo livro-card) */
+        .login-container {
+            width: min(400px, 90%);
+            background-color: var(--card-bg);
+            padding: 2.5rem 2rem;
+            border-radius: 22px; /* Seguindo o padrão das suas modais */
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            animation: fadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+            transition: var(--transition);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-container h1 {
+            font-family: 'Merriweather', serif;
+            color: var(--text-dark);
+            margin: 0 0 0.5rem 0;
+            font-size: 2.2rem;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 2rem;
+        }
+
+        /* Linhas do Formulário herdadas do seu padrão */
+        .form-row {
+            display: grid;
+            gap: 0.35rem;
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        .form-row label {
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .form-row input {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.8rem 0.9rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: var(--bg-color);
+            color: var(--text-dark);
+            transition: var(--transition);
+        }
+
+        .form-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(161, 136, 127, 0.2);
+        }
+
+        /* Botões */
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 1rem;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--button-bg);
+            color: white;
+        }
+
+        .btn:hover {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Alternador de Modo (Login vs Cadastro) */
+        .toggle-box {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .toggle-link {
+            color: var(--button-bg);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+        }
+
+        .toggle-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Mensagens de Erro/Sucesso */
+        .form-message {
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            min-height: 1.2rem;
+            font-weight: 600;
+        }
+        .error-msg { color: #ef5350; }
+        .success-msg { color: #4caf50; }
+
+        /* Botão de Tema Flutuante */
+        .theme-toggle-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            background-color: var(--button-hover);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <!-- Títulos Dinâmicos -->
+        <h1 id="form-title">Entrar</h1>
+        <p id="form-subtitle" class="subtitle">Faça login para gerenciar seu acervo</p>
+
+        <form id="auth-form" onsubmit="handleAuth(event)">
+            <div class="form-row">
+                <label for="username">Nome de Usuário *</label>
+                <input id="username" type="text" placeholder="Digite seu nome" required autocomplete="username">
+            </div>
+            
+            <div class="form-row">
+                <label for="password">Senha *</label>
+                <input id="password" type="password" placeholder="Digite sua senha" required autocomplete="current-password">
+            </div>
+
+            <div class="form-message" id="message-area"></div>
+
+            <button id="submit-btn" type="submit" class="btn btn-primary">Entrar</button>
+        </form>
+
+        <!-- Alternador entre Login e Cadastro -->
+        <div class="toggle-box" id="toggle-container">
+            Não tem uma conta? <button id="switch-mode-btn" class="toggle-link">Criar novo cadastro</button>
+        </div>
+    </div>
+
+    <!-- Botão de Tema Flutuante idêntico -->
+    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar Tema">🌓</button>
+
+    <script>
+        const apiBase = (() => {
+            if (window.location.protocol === 'file:') {
+                return 'http://localhost:3000';
+            }
+
+            const host = window.location.hostname;
+            const port = window.location.port;
+            if (host === '127.0.0.1' || host === 'localhost') {
+                return `${window.location.protocol}//${host}:3000`;
+            }
+            if (port === '3001') {
+                return `${window.location.protocol}//${host}:3000`;
+            }
+            return window.location.origin;
+        })();
+
+        const themeToggle = document.getElementById('theme-toggle');
+        const formTitle = document.getElementById('form-title');
+        const formSubtitle = document.getElementById('form-subtitle');
+        const submitBtn = document.getElementById('submit-btn');
+        const switchModeBtn = document.getElementById('switch-mode-btn');
+        const toggleContainer = document.getElementById('toggle-container');
+        const messageArea = document.getElementById('message-area');
+        
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        let isLoginMode = true; // Controla se a tela está em modo Login ou Cadastro
+
+        // Lógica de Sincronização Estrita de Temas (vinda do localStorage)
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeToggle.textContent = '☀️';
+        } else {
+            themeToggle.textContent = '🌙';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            let theme = 'light';
+            if (document.body.classList.contains('dark-theme')) {
+                theme = 'dark';
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+            localStorage.setItem('theme', theme);
+        });
+
+        // Alternador de Modo (Login <-> Cadastro)
+        switchModeBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            messageArea.textContent = '';
+            messageArea.className = 'form-message';
+
+            if (isLoginMode) {
+                formTitle.textContent = 'Entrar';
+                formSubtitle.textContent = 'Faça login para gerenciar seu acervo';
+                submitBtn.textContent = 'Entrar';
+                toggleContainer.innerHTML = 'Não tem uma conta? <button id="switch-mode-btn" class="toggle-link">Criar novo cadastro</button>';
+                passwordInput.setAttribute('autocomplete', 'current-password');
+            } else {
+                formTitle.textContent = 'Cadastrar';
+                formSubtitle.textContent = 'Crie sua conta para começar seu acervo';
+                submitBtn.textContent = 'Criar Conta';
+                toggleContainer.innerHTML = 'Já possui uma conta? <button id="switch-mode-btn" class="toggle-link">Fazer Login</button>';
+                passwordInput.setAttribute('autocomplete', 'new-password');
+            }
+
+            // Reatribui o evento ao novo botão gerado dinamicamente
+            document.getElementById('switch-mode-btn').addEventListener('click', arguments.callee);
+        });
+
+        async function handleAuth(event) {
+            event.preventDefault();
+            messageArea.textContent = '';
+            messageArea.className = 'form-message';
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                showMessage('Nome e senha são obrigatórios.', 'error-msg');
+                return;
+            }
+
+            try {
+                const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+                const response = await fetch(`${apiBase}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: username, senha: password })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Falha na autenticação');
+                }
+
+                localStorage.setItem('acervo-usuario', JSON.stringify({ id: data.id, usuario: data.usuario, senha: data.senha }));
+                showMessage(isLoginMode ? 'Login efetuado com sucesso! Redirecionando...' : 'Conta criada com sucesso! Carregando...', 'success-msg');
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1200);
+            } catch (error) {
+                showMessage(error.message || 'Erro ao autenticar.', 'error-msg');
+            }
+        }
+
+        function showMessage(text, className) {
+            messageArea.textContent = text;
+            messageArea.classList.add(className);
+        }
+    </script>
+</body>
+</html>

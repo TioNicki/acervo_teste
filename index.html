@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Acervo Literário</title>
+    <style>
+        /* Importação de fontes modernas do Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap');
+
+        /* Variáveis para Tema Claro */
+        :root {
+            --bg-color: #fdfcf8;      
+            --card-bg: #ffffff;      
+            --text-dark: #3e2723;    
+            --text-light: #5d4037;   
+            --accent: #a1887f;       
+            --button-bg: #6d4c41;    
+            --button-hover: #5d4037; 
+            --shadow: 0 4px 12px rgba(93, 64, 55, 0.08); 
+            --border-color: #efebe9;
+            --rounded: 12px;         
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Variáveis para Tema Escuro */
+        .dark-theme {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-dark: #f5efe6;
+            --text-light: #d7ccc8;
+            --accent: #8d6e63;
+            --button-bg: #8d6e63;
+            --button-hover: #a1887f;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --border-color: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        /* Cabeçalho Estilizado */
+        header {
+            background-color: var(--card-bg);
+            padding: 2rem 1rem 1rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow); 
+            transition: var(--transition);
+        }
+
+        header h1 {
+            font-family: 'Merriweather', serif;
+            color: var(--text-dark);
+            margin: 0 0 1.5rem 0;
+            font-size: 2.5rem;
+            transition: var(--transition);
+        }
+
+        /* Área de navegação (Busca e Botão) */
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .menu-btn {
+            position: absolute;
+            left: 0;
+            top: 0;
+            border: none;
+            background: transparent;
+            color: var(--text-dark);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.75rem 0.5rem;
+            transition: var(--transition);
+        }
+
+        .hamburger-icon {
+            width: 22px;
+            height: 2px;
+            background: var(--text-dark);
+            position: relative;
+            display: inline-block;
+            transition: var(--transition);
+        }
+
+        .hamburger-icon::before,
+        .hamburger-icon::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--text-dark);
+            left: 0;
+            transition: var(--transition);
+        }
+
+        .hamburger-icon::before { top: -6px; }
+        .hamburger-icon::after { top: 6px; }
+
+        /* Menu Lateral Animado */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100%;
+            background: var(--card-bg);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            padding: 1.5rem 1rem;
+            z-index: 1100;
+            transform: translateX(-110%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, background-color 0.3s;
+            opacity: 0;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1050;
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .side-menu.visible {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .side-menu.is-closing {
+            transform: translateX(-110%);
+            opacity: 0;
+        }
+
+        .side-menu-close {
+            border: none;
+            background: transparent;
+            color: var(--text-dark);
+            font-size: 1.6rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .side-menu-nav {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .side-menu-item {
+            width: 100%;
+            text-align: left;
+            border: none;
+            background: var(--bg-color);
+            color: var(--text-dark);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .side-menu-item.active,
+        .side-menu-item:hover {
+            background: var(--button-bg);
+            color: #fff;
+            transform: translateX(4px);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        nav input[type="search"] {
+            padding: 12px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            width: 300px;
+            font-size: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            transition: var(--transition);
+        }
+
+        nav input[type="search"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(161, 136, 127, 0.2);
+        }
+
+        /* Botões Arredondados */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--button-bg);
+            color: white;
+        }
+
+        .btn:hover {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Painel Minimalista de Estatísticas */
+        .stats-dashboard {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 1rem auto 0;
+            max-width: 800px;
+            padding: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .stat-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.75rem 1.5rem;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--button-bg);
+            display: block;
+            transition: var(--transition);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            transition: var(--transition);
+        }
+
+        .acervo-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--border-color);
+            border-radius: 999px;
+            padding: 0.5rem 1rem;
+            color: var(--text-dark);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: var(--transition);
+        }
+
+        .acervo-summary span {
+            color: var(--button-bg);
+        }
+
+        /* Área Principal */
+        main {
+            padding: 2rem 2rem 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Grid dos Livros */
+        #livros-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 30px;
+        }
+
+        /* Cartões dos Livros com Animação de Entrada */
+        .livro-card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: var(--rounded);
+            box-shadow: var(--shadow);
+            text-align: left;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            animation: fadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+            transition: var(--transition);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .livro-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+
+        .book-cover-container {
+            width: 100%;
+            height: 220px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .book-cover-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .livro-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .livro-card p {
+            margin: 0 0 1rem 0;
+            font-size: 0.9rem;
+            color: var(--accent);
+            transition: var(--transition);
+        }
+
+        .book-desc {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            transition: var(--transition);
+        }
+
+        .book-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            transition: var(--transition);
+        }
+
+        .book-meta span {
+            background: var(--bg-color);
+            border-radius: 999px;
+            padding: 0.3rem 0.6rem;
+            transition: var(--transition);
+        }
+
+        /* Botões dentro do card */
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-card {
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            flex: 1;
+        }
+
+        .btn-edit {
+            background-color: var(--border-color);
+            color: var(--text-light);
+        }
+
+        .btn-edit:hover {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-remove {
+            background-color: rgba(239, 154, 154, 0.3);
+            color: #ef5350;
+        }
+
+        .btn-remove:hover {
+            background-color: #ef5350;
+            color: white;
+        }
+
+        /* Rodapé */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: var(--accent);
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+            transition: var(--transition);
+        }
+
+        /* Modais Modernas com Animação de Zoom */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            padding: 1rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-box {
+            width: min(480px, 100%);
+            background: var(--card-bg);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            color: var(--text-dark);
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: scale(1);
+        }
+
+        /* Formulários nas modais */
+        .form-row {
+            display: grid;
+            gap: 0.35rem;
+            margin: 1rem 0 0;
+            text-align: left;
+        }
+
+        .form-row label {
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .form-row input,
+        .form-row textarea,
+        .form-row select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.8rem 0.9rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: var(--bg-color);
+            color: var(--text-dark);
+            transition: var(--transition);
+        }
+
+        .form-row textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal-title {
+            margin: 0 0 1rem;
+            font-size: 1.3rem;
+            color: var(--text-dark);
+        }
+
+        .form-error {
+            color: #ef5350;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            min-height: 1.2rem;
+        }
+
+        .modal-form-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .auth-message {
+            margin: 0 0 1rem;
+            color: var(--text-light);
+        }
+
+        .auth-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .header-actions .btn {
+            min-width: 110px;
+        }
+
+        /* Botão Alternador de Tema Flutuante */
+        .theme-toggle-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            background-color: var(--button-hover);
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 2rem; }
+            nav input[type="search"] { width: 100%; margin-bottom: 10px; }
+            .nav-container { flex-direction: column; }
+            .btn { width: 100%; }
+            main { padding: 1.5rem; }
+            .stats-dashboard { gap: 1rem; }
+            .stat-item { min-width: 40%; flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-inner">
+            <button id="menu-toggle" class="menu-btn" aria-expanded="false" aria-label="Abrir menu">
+                <span class="hamburger-icon"></span>
+                <span class="menu-label">Menu</span>
+            </button>
+            <h1>Meu Acervo</h1>
+        </div>
+        <nav class="nav-container">
+            <input id="search-input" type="search" placeholder="Buscar por título ou autor...">
+            <div class="header-actions">
+                <button id="add-book-btn" class="btn btn-primary">+ Adicionar Novo</button>
+                <button id="logout-btn" class="btn btn-card btn-edit">Sair</button>
+            </div>
+        </nav>
+
+        <div id="stats-dashboard" class="stats-dashboard">
+            <div id="stat-item-total" class="stat-item">
+                <span id="stat-total-read" class="stat-value">0</span>
+                <span class="stat-label">Lidos ao todo</span>
+            </div>
+            <div id="stat-item-month" class="stat-item">
+                <span id="stat-month-read" class="stat-value">0</span>
+                <span class="stat-label">Lidos no mês</span>
+            </div>
+            <div id="stat-item-notread" class="stat-item">
+                <span id="stat-not-read" class="stat-value">0</span>
+                <span class="stat-label">Não Lidos</span>
+            </div>
+        </div>
+
+        <div id="acervo-summary" class="acervo-summary">
+            Exibindo: <span id="acervo-count">0</span> livros
+        </div>
+    </header>
+
+    <div id="menu-overlay" class="menu-overlay" aria-hidden="true"></div>
+
+    <aside id="side-menu" class="side-menu" aria-hidden="true">
+        <button id="menu-close" class="side-menu-close" aria-label="Fechar menu">×</button>
+        <nav class="side-menu-nav">
+            <button id="menu-library" class="side-menu-item active" type="button">Minha Biblioteca</button>
+            <button id="menu-lidos" class="side-menu-item" type="button">Livros Lidos</button>
+            <button id="menu-buscar" class="side-menu-item" type="button">Buscar Livros Online</button>
+        </nav>
+    </aside>
+
+    <main>
+        <section id="livros-container">
+            <p id="loading-message" style="text-align:center; color: var(--accent);">Carregando acervo...</p>
+        </section>
+    </main>
+
+    <div id="modal-overlay" class="modal-overlay" aria-hidden="true">
+        <div id="confirm-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <h2 id="modal-title" class="modal-title">Confirmação</h2>
+            <p id="modal-message">Tem certeza?</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn btn-card btn-edit">Cancelar</button>
+                <button id="modal-confirm" class="btn btn-card btn-remove">Confirmar</button>
+            </div>
+        </div>
+
+        <div id="form-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="form-modal-title">
+            <h2 id="form-modal-title" class="modal-title">Adicionar novo livro</h2>
+            <div class="form-row">
+                <label for="book-title">Título *</label>
+                <input id="book-title" type="text" placeholder="Digite o título" required>
+            </div>
+            <div class="form-row">
+                <label for="book-author">Autor *</label>
+                <input id="book-author" type="text" placeholder="Digite o autor" required>
+            </div>
+            <div class="form-row">
+                <label for="book-description">Descrição</label>
+                <textarea id="book-description" placeholder="Breve descrição ou resumo"></textarea>
+            </div>
+            <div class="form-row">
+                <label for="book-pages">Páginas</label>
+                <input id="book-pages" type="number" min="0" placeholder="Total de páginas">
+            </div>
+            
+            <div class="form-row">
+                <label for="book-status">Status de Leitura</label>
+                <select id="book-status">
+                    <option value="lendo" selected>Lendo (Quero digitar páginas lidas)</option>
+                    <option value="completo">Completo (Já li tudo)</option>
+                </select>
+            </div>
+
+            <div class="form-row" id="pages-read-row">
+                <label for="book-pages-read">Páginas lidas</label>
+                <input id="book-pages-read" type="number" min="0" placeholder="Páginas já lidas">
+            </div>
+            
+            <div class="form-row">
+                <label for="book-image">URL da Imagem de Capa</label>
+                <input id="book-image" type="text" placeholder="https://exemplo.com/capa.jpg">
+            </div>
+            <div class="form-error" id="form-error"></div>
+            <div class="modal-form-actions">
+                <button id="form-cancel" class="btn btn-card btn-edit" type="button">Cancelar</button>
+                <button id="form-save" class="btn btn-card btn-primary" type="button">Salvar</button>
+            </div>
+        </div>
+
+        <div id="auth-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+            <h2 id="auth-modal-title" class="modal-title">Entrar no acervo</h2>
+            <p id="auth-modal-message" class="auth-message">Entre para acessar e administrar seus livros.</p>
+            <div class="form-row">
+                <label for="auth-usuario">Nome de usuário</label>
+                <input id="auth-usuario" type="text" placeholder="Digite seu usuário">
+            </div>
+            <div class="form-row">
+                <label for="auth-senha">Senha</label>
+                <input id="auth-senha" type="password" placeholder="Digite sua senha">
+            </div>
+            <div class="form-error" id="auth-error"></div>
+            <div class="modal-form-actions">
+                <button id="auth-switch-btn" class="btn btn-card btn-edit" type="button">Criar conta</button>
+                <button id="auth-submit-btn" class="btn btn-card btn-primary" type="button">Entrar</button>
+            </div>
+        </div>
+
+        <div id="import-modal" class="modal-box hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+            <h2 id="import-modal-title" class="modal-title">Importar Livro</h2>
+            <p id="import-modal-text">O livro já foi lido por completo?</p>
+            
+            <div id="import-pages-step" class="form-row hidden" style="margin-bottom: 1.5rem;">
+                <label id="import-pages-label" for="import-pages-input">Quantas páginas você leu?</label>
+                <input id="import-pages-input" type="number" min="0" value="0">
+            </div>
+
+            <div class="modal-actions" id="import-initial-actions">
+                <button id="import-btn-cancel" class="btn btn-card btn-edit">Cancelar</button>
+                <button id="import-btn-lendo" class="btn btn-card btn-edit" style="background-color: var(--border-color)">Ainda Lendo</button>
+                <button id="import-btn-completo" class="btn btn-card btn-primary">Completo</button>
+            </div>
+
+            <div class="modal-actions hidden" id="import-pages-actions">
+                <button id="import-btn-back" class="btn btn-card btn-edit">Voltar</button>
+                <button id="import-btn-confirm-pages" class="btn btn-card btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar Tema">🌓</button>
+
+    <footer>
+        <p>&copy; É os mano que faz programa</p>
+    </footer>
+
+    <script>
+        const apiBase = (() => {
+            if (window.location.protocol === 'file:') {
+                return 'http://localhost:3000';
+            }
+
+            const host = window.location.hostname;
+            const port = window.location.port;
+            if (host === '127.0.0.1' || host === 'localhost') {
+                return `${window.location.protocol}//${host}:3000`;
+            }
+            if (port === '3001') {
+                return `${window.location.protocol}//${host}:3000`;
+            }
+            return window.location.origin;
+        })();
+
+        const storageKey = 'acervo-literario-local';
+        const livrosContainer = document.getElementById('livros-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const searchInput = document.getElementById('search-input');
+        const addBookBtn = document.getElementById('add-book-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const acervoCount = document.getElementById('acervo-count');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const confirmModal = document.getElementById('confirm-modal');
+        const formModal = document.getElementById('form-modal');
+        const authModal = document.getElementById('auth-modal');
+        const importModal = document.getElementById('import-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        const formCancel = document.getElementById('form-cancel');
+        const formSave = document.getElementById('form-save');
+        const formTitle = document.getElementById('book-title');
+        const formAuthor = document.getElementById('book-author');
+        const formDescription = document.getElementById('book-description');
+        const formPages = document.getElementById('book-pages');
+        const formStatus = document.getElementById('book-status');
+        const pagesReadRow = document.getElementById('pages-read-row');
+        const formPagesRead = document.getElementById('book-pages-read');
+        const formImage = document.getElementById('book-image');
+        const formError = document.getElementById('form-error');
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuClose = document.getElementById('menu-close');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const sideMenu = document.getElementById('side-menu');
+        const menuLibrary = document.getElementById('menu-library');
+        const menuLidos = document.getElementById('menu-lidos');
+        const menuBuscar = document.getElementById('menu-buscar');
+        const themeToggle = document.getElementById('theme-toggle');
+        const authModalTitle = document.getElementById('auth-modal-title');
+        const authModalMessage = document.getElementById('auth-modal-message');
+        const authUsuario = document.getElementById('auth-usuario');
+        const authSenha = document.getElementById('auth-senha');
+        const authError = document.getElementById('auth-error');
+        const authSwitchBtn = document.getElementById('auth-switch-btn');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+
+        // Referências da Modal de Importação
+        const importModalTitle = document.getElementById('import-modal-title');
+        const importModalText = document.getElementById('import-modal-text');
+        const importPagesStep = document.getElementById('import-pages-step');
+        const importPagesLabel = document.getElementById('import-pages-label');
+        const importPagesInput = document.getElementById('import-pages-input');
+        const importInitialActions = document.getElementById('import-initial-actions');
+        const importPagesActions = document.getElementById('import-pages-actions');
+        const importBtnCancel = document.getElementById('import-btn-cancel');
+        const importBtnLendo = document.getElementById('import-btn-lendo');
+        const importBtnCompleto = document.getElementById('import-btn-completo');
+        const importBtnBack = document.getElementById('import-btn-back');
+        const importBtnConfirmPages = document.getElementById('import-btn-confirm-pages');
+
+        // Referências do Dashboard e itens individuais
+        const statsDashboard = document.getElementById('stats-dashboard');
+        const statItemTotal = document.getElementById('stat-item-total');
+        const statItemMonth = document.getElementById('stat-item-month');
+        const statItemNotRead = document.getElementById('stat-item-notread');
+
+        const statTotalRead = document.getElementById('stat-total-read');
+        const statMonthRead = document.getElementById('stat-month-read');
+        const statNotRead = document.getElementById('stat-not-read');
+
+        let confirmCallback = null;
+        let currentEditCard = null;
+        let localBooksList = []; 
+        let currentView = 'library';
+        let currentUser = null;
+        let authMode = 'login';
+
+        function buildBookId(prefix = 'book') {
+            return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        function normalizeBook(book, fallbackId = null) {
+            return {
+                id: book?.id ?? fallbackId ?? buildBookId(),
+                titulo: book?.titulo ?? '',
+                autor: book?.autor ?? '',
+                descricao: book?.descricao ?? '',
+                paginas: Number(book?.paginas) || 0,
+                paginas_lidas: Number(book?.paginas_lidas) || 0,
+                capa: book?.capa ?? '',
+                created_at: book?.created_at ?? new Date().toISOString(),
+            };
+        }
+
+        function getStorageKey() {
+            return currentUser ? `acervo-literario-local-${currentUser.id}` : `${storageKey}-anon`;
+        }
+
+        function getLocalBooks() {
+            try {
+                const saved = localStorage.getItem(getStorageKey());
+                return saved ? JSON.parse(saved).map((book) => normalizeBook(book)) : [];
+            } catch (error) {
+                console.warn('Falha ao ler acervo local:', error);
+                return [];
+            }
+        }
+
+        function persistLocalBooks(books) {
+            localBooksList = Array.isArray(books) ? books.map((book) => normalizeBook(book)) : [];
+            localStorage.setItem(getStorageKey(), JSON.stringify(localBooksList));
+            return localBooksList;
+        }
+
+        function getStoredUser() {
+            try {
+                const saved = localStorage.getItem('acervo-usuario');
+                return saved ? JSON.parse(saved) : null;
+            } catch (error) {
+                console.warn('Falha ao ler usuário salvo:', error);
+                return null;
+            }
+        }
+
+        function saveStoredUser(user) {
+            currentUser = user;
+            localStorage.setItem('acervo-usuario', JSON.stringify(user));
+        }
+
+        function clearStoredUser() {
+            currentUser = null;
+            localStorage.removeItem('acervo-usuario');
+        }
+
+        function showAuthModal(mode = 'login') {
+            authMode = mode;
+            confirmModal.classList.add('hidden');
+            formModal.classList.add('hidden');
+            importModal.classList.add('hidden');
+            authModal.classList.remove('hidden');
+            authError.textContent = '';
+            authUsuario.value = '';
+            authSenha.value = '';
+            authModalTitle.textContent = mode === 'login' ? 'Entrar no acervo' : 'Criar conta';
+            authModalMessage.textContent = mode === 'login'
+                ? 'Entre para acessar e administrar seus livros.'
+                : 'Cadastre-se para salvar seus livros em seu próprio login.';
+            authSubmitBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar conta';
+            authSwitchBtn.textContent = mode === 'login' ? 'Criar conta' : 'Já tenho conta';
+            showOverlay();
+            authUsuario.focus();
+        }
+
+        function closeAuthModal() {
+            authModal.classList.add('hidden');
+            hideOverlay();
+        }
+
+        function ensureAuthenticated() {
+            if (!currentUser) {
+                showAuthModal('login');
+                return false;
+            }
+            return true;
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'x-user-id': currentUser?.id || '',
+            };
+        }
+
+        // Lógica de Gerenciamento Estrito de Temas (Carrega do LocalStorage)
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeToggle.textContent = '☀️';
+        } else {
+            themeToggle.textContent = '🌙';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            let theme = 'light';
+            if (document.body.classList.contains('dark-theme')) {
+                theme = 'dark';
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+            localStorage.setItem('theme', theme);
+        });
+
+        formStatus.addEventListener('change', () => {
+            if (formStatus.value === 'completo') {
+                pagesReadRow.classList.add('hidden');
+            } else {
+                pagesReadRow.classList.remove('hidden');
+            }
+        });
+
+        function calculateStats() {
+            const totalLidos = localBooksList.filter(b => b.paginas > 0 && b.paginas === b.paginas_lidas).length;
+            const naoLidos = localBooksList.filter(b => b.paginas_lidas === 0).length;
+            
+            const hoje = new Date();
+            const anoAtual = hoje.getFullYear();
+            const mesAtual = hoje.getMonth(); 
+
+            const lidosNoMes = localBooksList.filter(b => {
+                if (!b.created_at || b.paginas === 0 || b.paginas !== b.paginas_lidas) return false;
+                const dataCriacao = new Date(b.created_at.replace(" ", "T"));
+                return dataCriacao.getFullYear() === anoAtual && dataCriacao.getMonth() === mesAtual;
+            }).length;
+
+            statTotalRead.textContent = totalLidos;
+            statMonthRead.textContent = lidosNoMes;
+            statNotRead.textContent = naoLidos;
+
+            if (currentView === 'library') {
+                statsDashboard.classList.remove('hidden');
+                statItemTotal.classList.remove('hidden');
+                statItemMonth.classList.remove('hidden');
+                statItemNotRead.classList.remove('hidden');
+            } else if (currentView === 'lidos') {
+                statsDashboard.classList.remove('hidden');
+                statItemTotal.classList.remove('hidden');
+                statItemMonth.classList.remove('hidden');
+                statItemNotRead.classList.add('hidden'); 
+            } else if (currentView === 'search') {
+                statsDashboard.classList.add('hidden'); 
+            }
+        }
+
+        function updateSummary(count) {
+            acervoCount.textContent = count;
+        }
+
+        function showOverlay() {
+            modalOverlay.classList.add('active');
+            modalOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function hideOverlay() {
+            modalOverlay.classList.remove('active');
+            modalOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function openSideMenu() {
+            sideMenu.classList.remove('is-closing');
+            sideMenu.classList.add('visible');
+            menuOverlay.classList.add('active');
+            sideMenu.setAttribute('aria-hidden', 'false');
+            menuOverlay.setAttribute('aria-hidden', 'false');
+            menuToggle.setAttribute('aria-expanded', 'true');
+        }
+
+        function closeSideMenu() {
+            if (!sideMenu.classList.contains('visible')) return;
+
+            sideMenu.classList.remove('visible');
+            sideMenu.classList.add('is-closing');
+            menuOverlay.classList.remove('active');
+            menuToggle.setAttribute('aria-expanded', 'false');
+
+            setTimeout(() => {
+                sideMenu.classList.remove('is-closing');
+                sideMenu.setAttribute('aria-hidden', 'true');
+                menuOverlay.setAttribute('aria-hidden', 'true');
+            }, 350);
+        }
+
+        function setMenuActive(activeButton) {
+            [menuLibrary, menuLidos, menuBuscar].forEach(btn => btn.classList.toggle('active', btn === activeButton));
+        }
+
+        function showLibraryView() {
+            currentView = 'library';
+            searchInput.value = '';
+            searchInput.placeholder = "Buscar por título ou autor...";
+            calculateStats();
+            renderLivros(localBooksList);
+            setMenuActive(menuLibrary);
+        }
+
+        function showLidosView() {
+            currentView = 'lidos';
+            searchInput.value = '';
+            searchInput.placeholder = "Buscar nos livros já lidos...";
+            calculateStats();
+            const livrosLidos = localBooksList.filter(b => b.paginas > 0 && b.paginas === b.paginas_lidas);
+            renderLivros(livrosLidos);
+            setMenuActive(menuLidos);
+        }
+
+        function showBuscarView() {
+            currentView = 'search';
+            setMenuActive(menuBuscar);
+            searchInput.placeholder = "Digitar nome do livro para buscar online...";
+            searchInput.focus();
+            calculateStats(); 
+            const termo = searchInput.value.trim();
+            if (termo.length >= 3) {
+                buscarOpenLibrary(termo);
+            } else {
+                livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Digite ao menos 3 caracteres na barra de busca para pesquisar livros na Open Library.</p>';
+                updateSummary(0);
+            }
+        }
+
+        function showConfirmModal(message, callback) {
+            modalMessage.textContent = message;
+            confirmCallback = callback;
+            confirmModal.classList.remove('hidden');
+            formModal.classList.add('hidden');
+            importModal.classList.add('hidden');
+            showOverlay();
+            modalConfirm.focus();
+        }
+
+        function showFormModal(card = null) {
+            currentEditCard = card;
+            confirmModal.classList.add('hidden');
+            importModal.classList.add('hidden');
+            formModal.classList.remove('hidden');
+            formError.textContent = '';
+
+            if (card) {
+                const bookId = card.dataset.id;
+                const bookData = localBooksList.find(b => String(b.id) === String(bookId));
+
+                document.getElementById('form-modal-title').textContent = 'Editar livro';
+                formTitle.value = bookData?.titulo || card.querySelector('h3').textContent;
+                formAuthor.value = bookData?.autor || card.querySelector('p').textContent;
+                formDescription.value = bookData?.descricao || card.querySelector('.book-desc')?.textContent || '';
+                
+                const totalPgs = bookData?.paginas || 0;
+                const lidasPgs = bookData?.paginas_lidas || 0;
+                
+                formPages.value = totalPgs;
+                formPagesRead.value = lidasPgs;
+                formImage.value = bookData?.capa || card.querySelector('.book-cover-container img')?.src || '';
+
+                if (totalPgs > 0 && totalPgs === lidasPgs) {
+                    formStatus.value = 'completo';
+                    pagesReadRow.classList.add('hidden');
+                } else {
+                    formStatus.value = 'lendo';
+                    pagesReadRow.classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('form-modal-title').textContent = 'Adicionar novo livro';
+                formTitle.value = '';
+                formAuthor.value = '';
+                formDescription.value = '';
+                formPages.value = '';
+                formPagesRead.value = '';
+                formImage.value = '';
+                formStatus.value = 'lendo';
+                pagesReadRow.classList.remove('hidden');
+            }
+
+            showOverlay();
+            formTitle.focus();
+        }
+
+        // Interface reativa para a Modal de Importação usando Promises
+        function abrirModalImportacao(livro) {
+            return new Promise((resolve) => {
+                importModalTitle.textContent = `Importar: ${livro.titulo}`;
+                importModalText.textContent = `O livro "${livro.titulo}" já foi lido por completo?`;
+                importPagesInput.max = livro.paginas;
+                importPagesLabel.textContent = `Quantas páginas você leu? (Total: ${livro.paginas})`;
+                importPagesInput.value = 0;
+
+                // Restaura o estado padrão dos steps da modal
+                importPagesStep.classList.add('hidden');
+                importPagesActions.classList.add('hidden');
+                importInitialActions.classList.remove('hidden');
+                importModalText.classList.remove('hidden');
+
+                confirmModal.classList.add('hidden');
+                formModal.classList.add('hidden');
+                importModal.classList.remove('hidden');
+                showOverlay();
+
+                // Remove os event listeners antigos antes de registrar novos
+                const limparListeners = () => {
+                    importBtnCompleto.onclick = null;
+                    importBtnLendo.onclick = null;
+                    importBtnCancel.onclick = null;
+                    importBtnBack.onclick = null;
+                    importBtnConfirmPages.onclick = null;
+                };
+
+                importBtnCompleto.onclick = () => {
+                    limparListeners();
+                    resolve({ salvar: true, paginasLidas: livro.paginas });
+                };
+
+                importBtnLendo.onclick = () => {
+                    // Muda para a segunda etapa (Digitar páginas lidas)
+                    importModalText.classList.add('hidden');
+                    importInitialActions.classList.add('hidden');
+                    importPagesStep.classList.remove('hidden');
+                    importPagesActions.classList.remove('hidden');
+                    importPagesInput.focus();
+                };
+
+                importBtnBack.onclick = () => {
+                    importPagesStep.classList.add('hidden');
+                    importPagesActions.classList.add('hidden');
+                    importInitialActions.classList.remove('hidden');
+                    importModalText.classList.remove('hidden');
+                };
+
+                importBtnConfirmPages.onclick = () => {
+                    let pgs = Number(importPagesInput.value) || 0;
+                    if (pgs > livro.paginas) pgs = livro.paginas;
+                    if (pgs < 0) pgs = 0;
+                    limparListeners();
+                    resolve({ salvar: true, paginasLidas: pgs });
+                };
+
+                importBtnCancel.onclick = () => {
+                    limparListeners();
+                    resolve({ salvar: false });
+                };
+            });
+        }
+
+        function closeModal() {
+            hideOverlay();
+            setTimeout(() => {
+                confirmModal.classList.add('hidden');
+                formModal.classList.add('hidden');
+                authModal.classList.add('hidden');
+                importModal.classList.add('hidden');
+                confirmCallback = null;
+                currentEditCard = null;
+            }, 200); 
+        }
+
+        modalConfirm.addEventListener('click', () => {
+            if (confirmCallback) confirmCallback(true);
+            closeModal();
+        });
+
+        modalCancel.addEventListener('click', () => {
+            if (confirmCallback) confirmCallback(false);
+            closeModal();
+        });
+
+        menuToggle.addEventListener('click', openSideMenu);
+        menuClose.addEventListener('click', closeSideMenu);
+        menuOverlay.addEventListener('click', closeSideMenu);
+
+        authSwitchBtn.addEventListener('click', () => {
+            showAuthModal(authMode === 'login' ? 'register' : 'login');
+        });
+
+        authSubmitBtn.addEventListener('click', async () => {
+            const usuario = authUsuario.value.trim();
+            const senha = authSenha.value.trim();
+
+            if (!usuario || !senha) {
+                authError.textContent = 'Preencha usuário e senha.';
+                return;
+            }
+
+            try {
+                const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+                const response = await fetch(`${apiBase}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, senha }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Falha na autenticação.');
+
+                saveStoredUser(data);
+                closeModal();
+                await fetchLivros();
+                if (currentView === 'lidos') showLidosView();
+                else showLibraryView();
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            clearStoredUser();
+            localBooksList = [];
+            renderLivros([]);
+            showAuthModal('login');
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && sideMenu.classList.contains('visible')) {
+                closeSideMenu();
+            }
+        });
+        
+        menuLibrary.addEventListener('click', () => {
+            showLibraryView();
+            closeSideMenu();
+        });
+        menuLidos.addEventListener('click', () => {
+            showLidosView();
+            closeSideMenu();
+        });
+        menuBuscar.addEventListener('click', () => {
+            showBuscarView();
+            closeSideMenu();
+        });
+
+        formCancel.addEventListener('click', closeModal);
+
+        formSave.addEventListener('click', () => {
+            if (!ensureAuthenticated()) return;
+
+            const titulo = formTitle.value.trim();
+            const autor = formAuthor.value.trim();
+            if (!titulo || !autor) {
+                formError.textContent = 'Título e autor são obrigatórios.';
+                return;
+            }
+
+            const totalPaginas = Number(formPages.value) || 0;
+            let paginasLidas = 0;
+
+            if (formStatus.value === 'completo') {
+                paginasLidas = totalPaginas;
+            } else {
+                paginasLidas = Number(formPagesRead.value) || 0;
+            }
+
+            const livroData = {
+                titulo,
+                autor,
+                descricao: formDescription.value.trim(),
+                paginas: totalPaginas,
+                paginas_lidas: paginasLidas,
+                capa: formImage.value.trim()
+            };
+
+            if (currentEditCard) {
+                saveEditedLivro(currentEditCard, livroData);
+            } else {
+                saveNewLivro(livroData);
+            }
+        });
+
+        modalOverlay.addEventListener('click', (event) => {
+            if (event.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (modalOverlay.classList.contains('active') && event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        function createLivroCard(book, index = 0) {
+            const card = document.createElement('article');
+            card.className = 'livro-card';
+            card.dataset.id = book.id;
+            card.style.animationDelay = `${index * 0.04}s`;
+
+            const coverContainer = document.createElement('div');
+            coverContainer.className = 'book-cover-container';
+            const img = document.createElement('img');
+            img.src = book.capa || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=200&auto=format&fit=crop';
+            img.alt = `Capa do livro ${book.titulo}`;
+            coverContainer.appendChild(img);
+            card.appendChild(coverContainer);
+
+            const info = document.createElement('div');
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = book.titulo;
+            const authorEl = document.createElement('p');
+            authorEl.textContent = book.autor;
+            info.appendChild(titleEl);
+            info.appendChild(authorEl);
+
+            if (book.descricao) {
+                const descEl = document.createElement('p');
+                descEl.className = 'book-desc';
+                descEl.textContent = book.descricao;
+                info.appendChild(descEl);
+            }
+
+            const meta = document.createElement('div');
+            meta.className = 'book-meta';
+            meta.innerHTML = `
+                <span>${book.paginas || 0} páginas</span>
+                <span>${book.paginas_lidas || 0} lidas</span>
+            `;
+
+            const actions = document.createElement('div');
+            actions.className = 'card-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-card btn-edit';
+            editBtn.textContent = 'Editar';
+            editBtn.addEventListener('click', () => showFormModal(card));
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-card btn-remove';
+            removeBtn.textContent = 'Remover';
+            removeBtn.addEventListener('click', () => removeLivro(card));
+
+            actions.appendChild(editBtn);
+            actions.appendChild(removeBtn);
+            
+            card.appendChild(info);
+            card.appendChild(meta);
+            card.appendChild(actions);
+            return card;
+        }
+
+        async function fetchLivros() {
+            try {
+                const response = await fetch(`${apiBase}/api/livros`, {
+                    headers: getAuthHeaders(),
+                });
+                if (!response.ok) throw new Error('Falha ao carregar livros');
+                const books = await response.json();
+                persistLocalBooks(Array.isArray(books) ? books : []);
+                calculateStats();
+                renderLivros(localBooksList);
+            } catch (error) {
+                console.error(error);
+                const fallbackBooks = getLocalBooks();
+                if (fallbackBooks.length > 0) {
+                    persistLocalBooks(fallbackBooks);
+                    calculateStats();
+                    renderLivros(localBooksList);
+                    return;
+                }
+                livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Erro ao carregar o acervo. Você pode continuar editando localmente.</p>';
+                updateSummary(0);
+            }
+        }
+
+        function renderLivros(livros) {
+            livrosContainer.innerHTML = '';
+            updateSummary(livros.length);
+            if (livros.length === 0) {
+                livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Nenhum livro localizado nesta seção.</p>';
+                return;
+            }
+            livros.forEach((livro, index) => livrosContainer.appendChild(createLivroCard(livro, index)));
+        }
+
+        async function buscarOpenLibrary(termo) {
+            if (termo.length < 3) {
+                if (currentView === 'library') renderLivros(localBooksList);
+                else if (currentView === 'lidos') showLidosView();
+                return;
+            }
+
+            livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Buscando referências na Open Library...</p>';
+            
+            try {
+                const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(termo)}&limit=8`);
+                const data = await res.json();
+                
+                livrosContainer.innerHTML = '';
+                
+                if (!data.docs || data.docs.length === 0) {
+                    livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Nenhum resultado externo encontrado.</p>';
+                    return;
+                }
+
+                data.docs.forEach((doc, index) => {
+                    const capaUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : '';
+                    const livroFormatado = {
+                        id: `ol-${doc.edition_key?.[0] || Math.random()}`,
+                        titulo: doc.title,
+                        autor: doc.author_name?.[0] || 'Autor Desconhecido',
+                        descricao: doc.first_sentence?.[0] || 'Sem descrição disponível.',
+                        paginas: doc.number_of_pages_median || doc.number_of_pages || 0,
+                        paginas_lidas: 0,
+                        capa: capaUrl
+                    };
+
+                    const card = createLivroCard(livroFormatado, index);
+                    const btnActions = card.querySelector('.card-actions');
+                    btnActions.innerHTML = ''; 
+
+                    const addBtn = document.createElement('button');
+                    addBtn.className = 'btn btn-card btn-primary';
+                    addBtn.textContent = 'Adicionar à Biblioteca';
+                    addBtn.style.borderRadius = '8px';
+                    
+                    addBtn.addEventListener('click', async () => {
+                        // Invoca o fluxo estático e elegante da nova modal customizada
+                        const resultado = await abrirModalImportacao(livroFormatado);
+                        
+                        if (!resultado.salvar) {
+                            closeModal();
+                            return; 
+                        }
+
+                        await saveNewLivro({
+                            titulo: livroFormatado.titulo,
+                            autor: livroFormatado.autor,
+                            descricao: livroFormatado.descricao,
+                            paginas: livroFormatado.paginas,
+                            paginas_lidas: resultado.paginasLidas,
+                            capa: livroFormatado.capa
+                        });
+                        
+                        searchInput.value = '';
+                        showLibraryView();
+                    });
+
+                    btnActions.appendChild(addBtn);
+                    livrosContainer.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Erro na Open Library API:", err);
+                filtrarLivrosLocais(termo);
+            }
+        }
+
+        function filtrarLivrosLocais(filtro) {
+            const filtroMin = filtro.toLowerCase();
+            let baseLista = localBooksList;
+            
+            if (currentView === 'lidos') {
+                baseLista = localBooksList.filter(b => b.paginas > 0 && b.paginas === b.paginas_lidas);
+            }
+
+            const filtrados = baseLista.filter(book => 
+                book.titulo.toLowerCase().includes(filtroMin) || 
+                book.autor.toLowerCase().includes(filtroMin)
+            );
+            renderLivros(filtrados);
+        }
+
+        async function saveNewLivro(livroData) {
+            const optimisticBook = normalizeBook({ id: buildBookId(), ...livroData });
+            const nextBooks = [optimisticBook, ...localBooksList];
+            persistLocalBooks(nextBooks);
+            closeModal();
+            renderLivros(localBooksList);
+
+            try {
+                const response = await fetch(`${apiBase}/api/livros`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(livroData),
+                });
+                if (!response.ok) throw new Error('Falha ao criar livro');
+                const savedBook = normalizeBook(await response.json(), optimisticBook.id);
+                const syncedBooks = nextBooks.map((book) => String(book.id) === String(optimisticBook.id) ? savedBook : book);
+                persistLocalBooks(syncedBooks);
+            } catch (error) {
+                console.error(error);
+                formError.textContent = 'Livro salvo localmente. O servidor não respondeu, mas ficará disponível offline.';
+            }
+
+            if (currentView === 'lidos') showLidosView();
+            else showLibraryView();
+        }
+
+        async function saveEditedLivro(card, livroData) {
+            const bookId = card.dataset.id;
+            const updatedList = localBooksList.map((book) => String(book.id) === String(bookId)
+                ? normalizeBook({ ...book, ...livroData }, bookId)
+                : book);
+            persistLocalBooks(updatedList);
+            closeModal();
+            renderLivros(localBooksList);
+
+            try {
+                const response = await fetch(`${apiBase}/api/livros/${bookId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(livroData),
+                });
+                if (!response.ok) throw new Error('Falha ao atualizar livro');
+                await response.json();
+            } catch (error) {
+                console.error(error);
+                formError.textContent = 'Edição salva localmente. O servidor não respondeu, mas os dados continuam disponíveis offline.';
+            }
+
+            if (currentView === 'lidos') showLidosView();
+            else showLibraryView();
+        }
+
+        async function removeLivro(card) {
+            const titulo = card.querySelector('h3').textContent;
+            showConfirmModal(`Deseja remover "${titulo}" do seu acervo permanente?`, async (confirmed) => {
+                if (!confirmed) return;
+
+                const bookId = card.dataset.id;
+                const nextBooks = localBooksList.filter((book) => String(book.id) !== String(bookId));
+                persistLocalBooks(nextBooks);
+
+                card.style.transform = 'scale(0.9) translateY(10px)';
+                card.style.opacity = '0';
+
+                try {
+                    const response = await fetch(`${apiBase}/api/livros/${bookId}`, {
+                        method: 'DELETE',
+                        headers: getAuthHeaders(),
+                    });
+                    if (!response.ok) throw new Error('Falha ao remover livro');
+                } catch (error) {
+                    console.error(error);
+                }
+
+                setTimeout(() => {
+                    card.remove();
+                    renderLivros(localBooksList);
+                    const currentCount = livrosContainer.querySelectorAll('.livro-card').length;
+                    if (currentCount === 0) {
+                        livrosContainer.innerHTML = '<p style="text-align:center; color: var(--accent);">Nenhum livro cadastrado ainda.</p>';
+                    }
+                    updateSummary(currentCount);
+                }, 250);
+            });
+        }
+
+        let timeoutBusca = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(timeoutBusca);
+            const termo = searchInput.value.trim();
+            timeoutBusca = setTimeout(() => {
+                if (currentView === 'library' || currentView === 'lidos') {
+                    filtrarLivrosLocais(termo);
+                } else {
+                    buscarOpenLibrary(termo);
+                }
+            }, 500);
+        });
+
+        addBookBtn.addEventListener('click', () => {
+            if (!ensureAuthenticated()) return;
+            showFormModal();
+        });
+
+        currentUser = getStoredUser();
+        if (!currentUser?.id) {
+            showAuthModal('login');
+        } else {
+            fetchLivros();
+        }
+    </script>
+</body>
+</html>
