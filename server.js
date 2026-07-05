@@ -77,21 +77,54 @@ function normalizeUser(user, fallbackId = null) {
 let fallbackBooks = readJsonFile(fallbackDataPath, []);
 let fallbackUsers = readJsonFile(fallbackUsersPath, []);
 let pool = null;
+let databaseInitPromise = null;
 
-const rawConnectionString = process.env.DATABASE_URL;
-if (rawConnectionString) {
+function getDatabaseConnectionString() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL || null;
+}
+
+async function initializeDatabase() {
+  const connectionString = getDatabaseConnectionString();
+  if (!connectionString) {
+    console.warn('DATABASE_URL não configurada; usando armazenamento local para usuários e livros.');
+    return false;
+  }
+
+  if (pool) {
+    return true;
+  }
+
   pool = new Pool({
-    connectionString: normalizeConnectionString(rawConnectionString),
-    ssl: process.env.NODE_ENV === 'production' || rawConnectionString.includes('render.com')
+    connectionString: normalizeConnectionString(connectionString),
+    ssl: process.env.NODE_ENV === 'production' || connectionString.includes('render.com')
       ? { rejectUnauthorized: false }
       : false,
   });
 
-  ensureDatabaseSchema().catch(() => {});
+  try {
+    await ensureDatabaseSchema();
+    await pool.query('SELECT 1');
+    console.log('Conexão com banco estabelecida.');
+    return true;
+  } catch (error) {
+    console.warn('Falha ao conectar ao banco, usando armazenamento local:', error.message);
+    pool = null;
+    return false;
+  }
+}
+
+async function ensureDatabaseReady() {
+  if (!databaseInitPromise) {
+    databaseInitPromise = initializeDatabase();
+  }
+
+  return databaseInitPromise;
 }
 
 async function isDatabaseAvailable() {
-  if (!pool) return false;
+  const databaseReady = await ensureDatabaseReady();
+  if (!databaseReady || !pool) return false;
+
   try {
     await pool.query('SELECT 1');
     return true;
@@ -263,8 +296,13 @@ app.get('/login.html', (req, res) => {
 
 app.use(express.static(path.join(__dirname)));
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', mode: pool ? 'database-or-fallback' : 'fallback' });
+app.get('/api/health', async (req, res) => {
+  const databaseReady = await ensureDatabaseReady();
+  res.json({
+    status: 'ok',
+    mode: databaseReady ? 'database-or-fallback' : 'fallback',
+    databaseConfigured: Boolean(getDatabaseConnectionString()),
+  });
 });
 
 app.post('/api/auth/login', async (req, res) => {
