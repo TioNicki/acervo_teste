@@ -746,6 +746,11 @@
             if (isLocalHost || port === '3001') {
                 return `${window.location.protocol}//${host || 'localhost'}:3000`;
             }
+
+            if (host.includes('netlify') || host.includes('acervoteste') || host.includes('render')) {
+                return 'https://acervo-teste.onrender.com';
+            }
+
             return window.location.origin;
         })();
 
