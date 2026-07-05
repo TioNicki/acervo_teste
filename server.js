@@ -39,8 +39,7 @@ function readJsonFile(filePath, fallbackValue) {
   ensureStore(filePath, JSON.stringify(fallbackValue));
   try {
     const rawData = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(rawData);
-    return parsed;
+    return JSON.parse(rawData);
   } catch (error) {
     console.warn(`Não foi possível ler ${filePath}, iniciando vazio.`, error.message);
     return fallbackValue;
@@ -67,6 +66,7 @@ function normalizeBook(book, fallbackId = null, userId = null) {
 }
 
 function normalizeUser(user, fallbackId = null) {
+  // AJUSTE: Garante compatibilidade estrita do ID (String no JSON local, Number no DB)
   return {
     id: user.id ?? fallbackId ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     usuario: user.usuario ?? '',
@@ -90,9 +90,7 @@ async function initializeDatabase() {
     return false;
   }
 
-  if (pool) {
-    return true;
-  }
+  if (pool) return true;
 
   pool = new Pool({
     connectionString: normalizeConnectionString(connectionString),
@@ -107,7 +105,7 @@ async function initializeDatabase() {
     console.log('Conexão com banco estabelecida.');
     return true;
   } catch (error) {
-    console.warn('Falha ao conectar ao banco, usando armazenamento local:', error.message);
+    console.error('Falha ao conectar ao banco. Verifique DATABASE_URL no Render ou no ambiente local:', error.message);
     pool = null;
     return false;
   }
@@ -117,7 +115,6 @@ async function ensureDatabaseReady() {
   if (!databaseInitPromise) {
     databaseInitPromise = initializeDatabase();
   }
-
   return databaseInitPromise;
 }
 
@@ -185,7 +182,6 @@ async function findUserByCredentials(usuario, senha) {
       console.warn('Falha ao consultar usuário no banco, usando fallback local.', error.message);
     }
   }
-
   return fallbackUsers.find((user) => user.usuario === usuario && user.senha === senha) || null;
 }
 
@@ -214,21 +210,13 @@ async function createUser(usuario, senha) {
 
 async function getBooksFromDatabase(userId) {
   const query = `
-    SELECT
-      id,
-      titulo,
-      autor,
-      descricao,
-      paginas,
-      paginas_lidas,
-      capa,
-      created_at,
-      id_usuario
+    SELECT id, titulo, autor, descricao, paginas, paginas_lidas, capa, created_at, id_usuario
     FROM acervo_literario
     WHERE id_usuario = $1
     ORDER BY titulo
   `;
-  const result = await pool.query(query, [userId]);
+  // AJUSTE: Cast numérico para evitar estouro caso a string 'local-x' seja enviada sem querer
+  const result = await pool.query(query, [Number(userId) || 0]);
   return result.rows.map((row) => normalizeBook(row, row.id, userId));
 }
 
@@ -245,7 +233,7 @@ async function createBookInDatabase(bookData, userId) {
     bookData.paginas,
     bookData.paginas_lidas,
     bookData.capa,
-    userId,
+    Number(userId) || 0,
   ]);
   return normalizeBook(result.rows[0], result.rows[0].id, userId);
 }
@@ -253,48 +241,48 @@ async function createBookInDatabase(bookData, userId) {
 async function updateBookInDatabase(bookId, bookData, userId) {
   const query = `
     UPDATE acervo_literario
-    SET titulo = $2,
-        autor = $3,
-        descricao = $4,
-        paginas = $5,
-        paginas_lidas = $6,
-        capa = $7
+    SET titulo = $2, autor = $3, descricao = $4, paginas = $5, paginas_lidas = $6, capa = $7
     WHERE id = $1 AND id_usuario = $8
     RETURNING id, titulo, autor, descricao, paginas, paginas_lidas, capa, created_at, id_usuario
   `;
-  const result = await pool.query(query, [bookId, bookData.titulo, bookData.autor, bookData.descricao, bookData.paginas, bookData.paginas_lidas, bookData.capa, userId]);
+  const result = await pool.query(query, [
+    Number(bookId) || 0,
+    bookData.titulo,
+    bookData.autor,
+    bookData.descricao,
+    bookData.paginas,
+    bookData.paginas_lidas,
+    bookData.capa,
+    Number(userId) || 0
+  ]);
   return result.rows[0] ? normalizeBook(result.rows[0], result.rows[0].id, userId) : null;
 }
 
 async function deleteBookInDatabase(bookId, userId) {
-  const result = await pool.query('DELETE FROM acervo_literario WHERE id = $1 AND id_usuario = $2', [bookId, userId]);
+  const result = await pool.query(
+    'DELETE FROM acervo_literario WHERE id = $1 AND id_usuario = $2', 
+    [Number(bookId) || 0, Number(userId) || 0]
+  );
   return result.rowCount > 0;
 }
 
 app.use(cors());
 app.use(express.json());
 
+// Servindo arquivos estáticos de forma limpa
+app.use(express.static(path.join(__dirname)));
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/index', (req, res) => {
+app.get(['/index', '/index.html'], (req, res) => {
   res.redirect('/');
 });
 
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('/login', (req, res) => {
+app.get(['/login', '/login.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
-
-app.get('/login.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'login.html'));
-});
-
-app.use(express.static(path.join(__dirname)));
 
 app.get('/api/health', async (req, res) => {
   const databaseReady = await ensureDatabaseReady();
