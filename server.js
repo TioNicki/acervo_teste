@@ -179,15 +179,32 @@ async function findUserByCredentials(usuario, senha) {
 }
 
 async function createUser(usuario, senha) {
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext(LOWER($1)))', [usuario]);
+
+    const existingUser = await client.query(
+      'SELECT id FROM usuarios_acervo WHERE LOWER(usuario) = LOWER($1) LIMIT 1',
+      [usuario]
+    );
+    if (existingUser.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const result = await client.query(
       'INSERT INTO usuarios_acervo (usuario, senha) VALUES ($1, $2) RETURNING id, usuario, senha',
       [usuario, senha]
     );
+    await client.query('COMMIT');
     return result.rows[0] ? normalizeUser(result.rows[0]) : null;
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     if (error.code === '23505') return null;
     throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -277,11 +294,12 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/auth/login', requireDatabase, async (req, res) => {
   try {
     const { usuario, senha } = req.body || {};
-    if (!usuario || !senha) {
+    const normalizedUsuario = String(usuario || '').trim();
+    if (!normalizedUsuario || !senha) {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
     }
 
-    const user = await findUserByCredentials(usuario, senha);
+    const user = await findUserByCredentials(normalizedUsuario, senha);
     if (!user) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
     }
@@ -296,11 +314,12 @@ app.post('/api/auth/login', requireDatabase, async (req, res) => {
 app.post('/api/auth/register', requireDatabase, async (req, res) => {
   try {
     const { usuario, senha } = req.body || {};
-    if (!usuario || !senha) {
+    const normalizedUsuario = String(usuario || '').trim();
+    if (!normalizedUsuario || !senha) {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
     }
 
-    const user = await createUser(usuario, senha);
+    const user = await createUser(normalizedUsuario, senha);
     if (!user) {
       return res.status(409).json({ error: 'Nome de usuário já existe.' });
     }

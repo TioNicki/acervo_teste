@@ -135,6 +135,12 @@
             transform: translateY(-2px);
         }
 
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            transform: none;
+        }
+
         /* Alternador de Modo (Login vs Cadastro) */
         .toggle-box {
             margin-top: 1.5rem;
@@ -313,6 +319,8 @@
 
         async function handleAuth(event) {
             event.preventDefault();
+            if (submitBtn.disabled) return;
+
             messageArea.textContent = '';
             messageArea.className = 'form-message';
 
@@ -323,6 +331,10 @@
                 showMessage('Nome e senha são obrigatórios.', 'error-msg');
                 return;
             }
+
+            const originalSubmitText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = isLoginMode ? 'Entrando...' : 'Criando...';
 
             try {
                 const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
@@ -345,6 +357,8 @@
                 }, 1200);
             } catch (error) {
                 showMessage(error.message || 'Erro ao autenticar.', 'error-msg');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalSubmitText;
             }
         }
 
