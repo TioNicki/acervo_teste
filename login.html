@@ -263,7 +263,6 @@
         const formTitle = document.getElementById('form-title');
         const formSubtitle = document.getElementById('form-subtitle');
         const submitBtn = document.getElementById('submit-btn');
-        const switchModeBtn = document.getElementById('switch-mode-btn');
         const toggleContainer = document.getElementById('toggle-container');
         const messageArea = document.getElementById('message-area');
         
@@ -293,11 +292,11 @@
             sessionStorage.setItem('theme', theme);
         });
 
-        // Alternador de Modo (Login <-> Cadastro)
-        switchModeBtn.addEventListener('click', () => {
+        function switchAuthMode() {
             isLoginMode = !isLoginMode;
             messageArea.textContent = '';
             messageArea.className = 'form-message';
+            submitBtn.disabled = false;
 
             if (isLoginMode) {
                 formTitle.textContent = 'Entrar';
@@ -312,9 +311,13 @@
                 toggleContainer.innerHTML = 'Já possui uma conta? <button id="switch-mode-btn" class="toggle-link">Fazer Login</button>';
                 passwordInput.setAttribute('autocomplete', 'new-password');
             }
+        }
 
-            // Reatribui o evento ao novo botão gerado dinamicamente
-            document.getElementById('switch-mode-btn').addEventListener('click', arguments.callee);
+        // Alternador de Modo (Login <-> Cadastro)
+        toggleContainer.addEventListener('click', (event) => {
+            if (event.target.id === 'switch-mode-btn') {
+                switchAuthMode();
+            }
         });
 
         async function handleAuth(event) {
